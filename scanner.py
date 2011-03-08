@@ -25,7 +25,7 @@ class Pixel(Point):
         self.world.world_data[self.position] = generation_number % 256, green, blue
 
     def mark_distance_from_wall(self):
-        self.set_blue(self.distance_from_wall % 256)
+        self.set_blue((self.distance_from_wall * 16) % 256)
 
     def set_blue(self, value):
         red, green, blue = self.value
@@ -62,15 +62,17 @@ class FloodFill:
             layer = self.expand_distances(layer, distance)
             c += len(layer)
             self.mark_distance_from_wall(layer) # TODO: slows down everything, called many times for the same pixels
+            '''
             for point in layer:
                 point.set_green(127)
             self.image.save('dist-' + str(distance) + '.png')
             for point in layer:
                 point.set_green(255)
             #print '\tdistance {0}, points on the edge: {1}'.format(distance, len(layer))
+        '''
         if c > 0:
             print '\tdistance {0}, points processed: {1}'.format(distance, c)
-            raw_input()
+           # raw_input()
 
     def expand(self, layer):
         hit_wall = set()
@@ -108,9 +110,10 @@ class FloodFill:
     def mark_generation(self, layer, generation_number):
         for point in layer:
             point.mark_generation_number(generation_number)
-        if generation_number % 1 == 0:
+        if generation_number % 10 == 0:
             self.image.save(str(generation_number) + '.png')
-            print 'generation {0}, points on the edge: {1}'.format(generation_number, len(layer))
+            
+        print 'generation {0}, points on the edge: {1}'.format(generation_number, len(layer))
             #raw_input()
             
     def mark_distance_from_wall(self, layer):
