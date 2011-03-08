@@ -1,3 +1,45 @@
+class Point:
+    def __init__(self, world, position, value):
+        self.world = world
+        self.position = position
+        self.value = value
+        self.visited = False
+
+        if self.is_air():
+            self.distance_from_wall = 2**16 - 1
+            self.distance_verified = False
+        else:
+            self.distance_from_wall = 0
+            self.distance_verified = True
+
+
+class Pixel(Point):
+    def is_air(self):
+        return self.value[1] != 0
+    
+    def mark_generation_number(self, generation_number):
+        red, green, blue = self.value
+        self.world.world_data[self.position] = generation_number % 256, green, blue
+
+    def mark_distance_from_wall(self):
+        self.set_blue((self.distance_from_wall * 16) % 256)
+
+    def set_blue(self, value):
+        red, green, blue = self.value
+        self.world.world_data[self.position] = red, green, value
+        self.value = red, green, value
+    
+    def set_green(self, value):
+        red, green, blue = self.value
+        self.world.world_data[self.position] = red, value, blue
+        self.value = red, value, blue
+
+    def __repr__(self):
+        return 'P(' + str(self.position) + ', ' + str(self.distance_from_wall) + ')'
+    
+    __str__ = __repr__             
+
+
 class FloodFill:
     def expand_distances(self, layer):
         new_layer = set()
