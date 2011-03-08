@@ -3,14 +3,14 @@ class Point:
         self.world = world
         self.position = position
         self.value = value
-        self.visited = False
+        self.visited = False # current generation. Neighbors to be verified this turn or already verified
+        self.verified = False # neighbors verified
 
         if self.is_air():
             self.distance_from_wall = 2**16 - 1
-            self.distance_verified = False
+
         else:
             self.distance_from_wall = 0
-            self.distance_verified = True
 
 
 class Pixel(Point):
@@ -47,10 +47,14 @@ class FloodFill:
         if layer:
             dist = list(layer)[0].distance_from_wall
         
+#        print 'dist', dist
+        
         for point in layer:
             if point.distance_from_wall != dist:
                 print layer
+                print point, dist
                 raise Exception('point borked')
+#            print point, self.get_neighbors(point)
             for neighbor in self.get_neighbors(point):
                 if neighbor.is_air() and neighbor.visited and neighbor.distance_from_wall > point.distance_from_wall + 1:
                     neighbor.distance_from_wall = point.distance_from_wall + 1
@@ -59,7 +63,7 @@ class FloodFill:
 
     def update_distances(self, layer):
         c = len(layer)
-        distance = 1
+        distance = 0
 
         while layer:
             distance += 1
@@ -79,30 +83,44 @@ class FloodFill:
            # raw_input()
 
     def expand(self, layer):
-        hit_wall = set()
+        walls_hit = set()
         new_layer = set()
+        '''
+        print 'starting with'
+        print layer
+        '''
+        for point in layer:
+            point.visited = True
         
         for point in layer:
             possible_wall_distances = [point.distance_from_wall]
             for neighbor in self.get_neighbors(point):
-                if neighbor.distance_verified:
-                    possible_wall_distances.append(neighbor.distance_from_wall + 1)
                 if neighbor.is_air():
                     if not neighbor.visited:
                         new_layer.add(neighbor)
+                    if neighbor.verified:
+                        possible_wall_distances.append(neighbor.distance_from_wall + 1)
                 else: # neighbor is wall
-                    hit_wall.add(point)
-
+                    walls_hit.add(neighbor)
                     
             point.distance_from_wall = min(possible_wall_distances)
-            point.visited = True
-            
-        self.mark_distance_from_wall(layer) # TODO: slows down everything, called many times for the same pixels
-        self.update_distances(hit_wall)
         
-        for point in layer:
-            point.distance_verified = True
-
+        for point in layer: # distance was updated, point is not in the front line
+            point.verified = True
+        '''
+        print 'updated distances'
+        print layer    
+        
+        print 'detected walls'
+        print walls_hit
+        '''
+        self.mark_distance_from_wall(layer) # TODO: slows down everything, called many times for the same pixels
+        self.update_distances(walls_hit)
+        '''
+        print 'new distances'
+        print layer
+        raw_input()
+        '''
         return new_layer
     
     def flood_fill(self, layer):

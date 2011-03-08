@@ -23,7 +23,7 @@ if __name__ == '__main__':
     else:
         starting_layer = []
         xsize, ysize = world.size
-        for y in range(ysize):
+        for y in range(80, 90):
             starting_layer.append(flood_filler.get_point((0, y)))
 
     flood_filler.flood_fill(starting_layer)    
