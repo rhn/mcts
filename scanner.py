@@ -10,10 +10,13 @@ class Point:
         self.position = position
         self.value = value
         self.visited = False
+
         if self.is_air():
-            self.distance_from_wall = 2**16
+            self.distance_from_wall = 2**16 - 1
+            self.distance_verified = False
         else:
             self.distance_from_wall = 0
+            self.distance_verified = True
 
 
 class Pixel(Point):
@@ -38,18 +41,24 @@ class Pixel(Point):
         self.value = red, value, blue
 
     def __repr__(self):
-        return str(self.position)
+        return 'P(' + str(self.position) + ', ' + str(self.distance_from_wall) + ')'
     
     __str__ = __repr__
 
 
 class FloodFill:
-    def expand_distances(self, layer, distance):
+    def expand_distances(self, layer):
         new_layer = set()
+        
+        if layer:
+            dist = list(layer)[0].distance_from_wall
+        
         for point in layer:
+            if point.distance_from_wall != dist:
+                raise Exception('point borked')
             for neighbor in self.get_neighbors(point):
-                if neighbor.is_air() and neighbor.visited and neighbor.distance_from_wall > distance:
-                    neighbor.distance_from_wall = distance
+                if neighbor.is_air() and neighbor.visited and neighbor.distance_from_wall > point.distance_from_wall + 1:
+                    neighbor.distance_from_wall = point.distance_from_wall + 1
                     new_layer.add(neighbor)
         return new_layer
 
@@ -59,7 +68,7 @@ class FloodFill:
 
         while layer:
             distance += 1
-            layer = self.expand_distances(layer, distance)
+            layer = self.expand_distances(layer)
             c += len(layer)
             self.mark_distance_from_wall(layer) # TODO: slows down everything, called many times for the same pixels
             '''
@@ -78,24 +87,42 @@ class FloodFill:
         hit_wall = set()
     
         new_layer = set()
+        '''
+        print 'starting from:'
+        print layer
+        '''
         for point in layer:
             possible_wall_distances = [point.distance_from_wall]
             for neighbor in self.get_neighbors(point):
+                if neighbor.distance_verified:
+                    possible_wall_distances.append(neighbor.distance_from_wall + 1)
                 if neighbor.is_air():
                     if not neighbor.visited:
                         new_layer.add(neighbor)
-                    else:
-                        possible_wall_distances.append(neighbor.distance_from_wall + 1)
                 else: # neighbor is wall
-                    possible_wall_distances.append(1)
                     hit_wall.add(point)
+
                     
             point.distance_from_wall = min(possible_wall_distances)
             point.visited = True
-            
+        '''
+        print 'processed:'
+        print layer
+        
+        print 'got:'
+        print new_layer
+        '''
         self.mark_distance_from_wall(layer) # TODO: slows down everything, called many times for the same pixels
         self.update_distances(hit_wall)
         
+        for point in layer:
+            point.distance_verified = True
+        '''
+        print 'updated:'
+        print layer
+        
+        raw_input()
+        '''
         return new_layer
     
     def flood_fill(self, layer):
