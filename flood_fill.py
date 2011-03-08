@@ -49,6 +49,7 @@ class FloodFill:
         
         for point in layer:
             if point.distance_from_wall != dist:
+                print layer
                 raise Exception('point borked')
             for neighbor in self.get_neighbors(point):
                 if neighbor.is_air() and neighbor.visited and neighbor.distance_from_wall > point.distance_from_wall + 1:
