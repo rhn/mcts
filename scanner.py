@@ -85,12 +85,8 @@ class FloodFill:
 
     def expand(self, layer):
         hit_wall = set()
-    
         new_layer = set()
-        '''
-        print 'starting from:'
-        print layer
-        '''
+        
         for point in layer:
             possible_wall_distances = [point.distance_from_wall]
             for neighbor in self.get_neighbors(point):
@@ -105,24 +101,13 @@ class FloodFill:
                     
             point.distance_from_wall = min(possible_wall_distances)
             point.visited = True
-        '''
-        print 'processed:'
-        print layer
-        
-        print 'got:'
-        print new_layer
-        '''
+            
         self.mark_distance_from_wall(layer) # TODO: slows down everything, called many times for the same pixels
         self.update_distances(hit_wall)
         
         for point in layer:
             point.distance_verified = True
-        '''
-        print 'updated:'
-        print layer
-        
-        raw_input()
-        '''
+
         return new_layer
     
     def flood_fill(self, layer):
