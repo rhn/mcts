@@ -49,4 +49,5 @@ if __name__ == '__main__':
             import traceback
             traceback.print_exc(e)
             print 'broken'
+        print 'finished'
         raw_input()

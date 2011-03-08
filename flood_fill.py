@@ -18,24 +18,28 @@ class Pixel(Point):
     
     def mark_generation_number(self, generation_number):
         red, green, blue = self.value
-        self.world_data[self.position] = generation_number % 256, green, blue
+        self.world_data[self.position] = (generation_number % 256, green, blue)
 
     def mark_distance_from_wall(self):
         self.set_blue((self.distance_from_wall * 16) % 256)
 
+    def mark_final(self):
+        self.value = (255, 0, 0)
+        self.world_data[self.position] = self.value
+
     def set_red(self, value):
         red, green, blue = self.value
-        self.world_data[self.position] = value, green, blue
+        self.world_data[self.position] = (value, green, blue)
         self.value = value, green, blue
 
     def set_blue(self, value):
         red, green, blue = self.value
-        self.world_data[self.position] = red, green, value
+        self.world_data[self.position] = (red, green, value)
         self.value = red, green, value
     
     def set_green(self, value):
         red, green, blue = self.value
-        self.world_data[self.position] = red, value, blue
+        self.world_data[self.position] = (red, value, blue)
         self.value = red, value, blue
 
     def __repr__(self):

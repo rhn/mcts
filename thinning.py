@@ -20,7 +20,15 @@ class DistanceThinner:
     def perform_thinning(self):
         print
         print 'sorting layers'
+        
         distances = self.get_sorted_points()
+        
+        if 0 in distances: # there are walls in it
+            for point in distances[0]:
+                del self.points[point.position]
+            del distances[0]
+        
+        total_points = len(self.points)
         
         print 'thinning'
         print
@@ -42,6 +50,7 @@ class DistanceThinner:
 
             while modified:
                 i += 1
+                #iterdel = 0
                 modified = False
                 for point in list(points):
                     neighbors = self.get_neighbors(point)
@@ -55,13 +64,21 @@ class DistanceThinner:
                         point.set_blue(127)
                         modified = True
                         deleted += 1
+                 #       iterdel += 1
                     else: # point is not maximum but had to stay
                         pass
+                #print '\t\t{0}: removed {1}'.format(i, iterdel)
+                #self.image.save('thin-' + str(distance) + '-' + str(i) + '.png')
             unremoved = points
             
             print '\tRemoved {0} points in {1} iterations, left {2}'.format(deleted, i, len(unremoved))
             self.image.save('thin-' + str(distance) + '.png')
-            raw_input()
+            #raw_input()
+            
+        for point in unremoved:
+            point.mark_final()
+        
+        print 'Thinning finished with {0} points left out of {1}'.format(len(unremoved), total_points)
 
 
 class ImageDistanceThinner(DistanceThinner):
