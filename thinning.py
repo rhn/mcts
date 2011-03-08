@@ -58,6 +58,7 @@ class DistanceThinner:
                     if self.is_maximum(point, neighbors):
                         points.remove(point)
                         maxima.append(point)
+                        point.mark_maximum()
                     elif self.is_expendable(point, neighbors):
                         del self.points[point.position] # deletion must be immediate. otherwise two neighboring maxima would both either stay or erase
                         points.remove(point)
