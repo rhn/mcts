@@ -11,14 +11,14 @@ class DistanceThinner:
     def get_sorted_points(self): # can be optimized
         distances = {}
         for position, point in self.points.items():
-            distance = point.distance_from_walls
+            distance = point.distance_from_wall
             if distance not in distances:
-                distances[point.distance_from_walls] = []
-            distances[point.distance_from_walls].append((position, point))
+                distances[point.distance_from_wall] = set()
+            distances[point.distance_from_wall].add(point)
         return distances
 
     def perform_thinning(self):
-        points_by_distance = self.get_sorted_points()
+        distances = self.get_sorted_points()
         
         print
         print 'thinning'
@@ -28,7 +28,7 @@ class DistanceThinner:
             points = distances[distance]
             print 'distance {0}, points on the edge: {1}'.format(distance, len(points))
             modified = True
-            for position, point in points:
+            for point in points:
                 point.set_red(0)
 
             deleted = 0
@@ -37,9 +37,9 @@ class DistanceThinner:
             while modified:
                 i += 1
                 modified = False
-                for position, point in points.items():
+                for point in list(points):
                     if self.is_expendable(point):
-                        del self.points[position] # deletion must be immediate. otherwise two neighboring maxima would both either stay or erase
+                        self.points.remove(point) # deletion must be immediate. otherwise two neighboring maxima would both either stay or erase
                         del points[position]
                         point.set_red(255)
                         modified = True

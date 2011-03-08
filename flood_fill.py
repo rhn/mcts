@@ -1,6 +1,6 @@
 class Point:
     def __init__(self, world, position, value):
-        self.world = world
+        self.world_data = world
         self.position = position
         self.value = value
         self.visited = False # current generation. Neighbors to be verified this turn or already verified
@@ -19,19 +19,24 @@ class Pixel(Point):
     
     def mark_generation_number(self, generation_number):
         red, green, blue = self.value
-        self.world.world_data[self.position] = generation_number % 256, green, blue
+        self.world_data[self.position] = generation_number % 256, green, blue
 
     def mark_distance_from_wall(self):
         self.set_blue((self.distance_from_wall * 16) % 256)
 
+    def set_red(self, value):
+        red, green, blue = self.value
+        self.world_data[self.position] = value, green, blue
+        self.value = value, green, blue
+
     def set_blue(self, value):
         red, green, blue = self.value
-        self.world.world_data[self.position] = red, green, value
+        self.world_data[self.position] = red, green, value
         self.value = red, green, value
     
     def set_green(self, value):
         red, green, blue = self.value
-        self.world.world_data[self.position] = red, value, blue
+        self.world_data[self.position] = red, value, blue
         self.value = red, value, blue
 
     def __repr__(self):
@@ -134,7 +139,7 @@ class FloodFill:
     def mark_generation(self, layer, generation_number):
         for point in layer:
             point.mark_generation_number(generation_number)
-        if generation_number % 10 == 0:
+        if generation_number % 100 == 0:
             self.image.save(str(generation_number) + '.png')
             
         print 'generation {0}, points on the edge: {1}'.format(generation_number, len(layer))
@@ -156,7 +161,7 @@ class ImageFloodFill(FloodFill):
     
     def get_point(self, position):
         if position not in self.points:
-            self.points[position] = Pixel(self, position, self.world_data[position])
+            self.points[position] = Pixel(self.world_data, position, self.world_data[position])
         return self.points[position]
                 
     def get_neighbors(self, point):

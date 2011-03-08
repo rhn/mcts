@@ -23,12 +23,27 @@ if __name__ == '__main__':
     else:
         starting_layer = []
         xsize, ysize = world.size
-        for y in range(80, 90):
+        for y in range(ysize):
             starting_layer.append(flood_filler.get_point((0, y)))
 
     flood_filler.flood_fill(starting_layer)    
     world.save('flood_fill.png')
     
-    thinner = thinning.ImageDistanceThinner(flood_filler.points)
-    
-    world.save('thinned.png')
+    while True:
+        try:
+            world2 = world.copy()
+            world_data2 = world2.load()
+            new_points = {}
+            for position, point in flood_filler.points.items():
+                new_point = flood_fill.Pixel(world_data2, position, point.value)
+                new_points[position] = new_point
+            
+            thinner = thinning.ImageDistanceThinner(new_points)
+            thinner.image = world2
+            thinner.perform_thinning()
+            world2.save('thinned.png')
+        except Exception, e:
+            import traceback
+            traceback.print_exc(e)
+            raw_input()
+        reload(thinning)
