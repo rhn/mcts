@@ -36,14 +36,17 @@ if __name__ == '__main__':
             new_points = {}
             for position, point in flood_filler.points.items():
                 new_point = flood_fill.Pixel(world_data2, position, point.value)
+                new_point.distance_from_wall = point.distance_from_wall
                 new_points[position] = new_point
-            
+            reload(thinning)
             thinner = thinning.ImageDistanceThinner(new_points)
             thinner.image = world2
             thinner.perform_thinning()
             world2.save('thinned.png')
+        except KeyboardInterrupt:
+            print 'interrupted'
         except Exception, e:
             import traceback
             traceback.print_exc(e)
-            raw_input()
-        reload(thinning)
+            print 'broken'
+        raw_input()

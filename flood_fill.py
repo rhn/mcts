@@ -8,7 +8,6 @@ class Point:
 
         if self.is_air():
             self.distance_from_wall = 2**16 - 1
-
         else:
             self.distance_from_wall = 0
 
