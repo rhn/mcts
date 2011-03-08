@@ -98,8 +98,7 @@ class FloodFill:
         
         return new_layer
     
-    def flood_fill(self, starting_position):
-        layer = [self.get_point(starting_position)]
+    def flood_fill(self, layer):
         i = 0
         while layer:
             i += 1
@@ -150,14 +149,22 @@ class ImageFloodFill(FloodFill):
 
 if __name__ == '__main__':
     world = Image.open(sys.argv[1])
-    xpos = int(sys.argv[2])
-    ypos = int(sys.argv[3])
-    xsize, ysize = world.size
-    
-    if xsize <= xpos or ysize <= ypos:
-        raise ValueError("Position exceeds size")
-    
+
     flood_fill = ImageFloodFill(world)
-    flood_fill.flood_fill((xpos, ypos))
-    
+    if len(sys.argv) == 4:
+        xpos = int(sys.argv[2])
+        ypos = int(sys.argv[3])
+        xsize, ysize = world.size
+        
+        if xsize <= xpos or ysize <= ypos:
+            raise ValueError("Position exceeds size")
+        
+        starting_layer = [flood_fill.get_point((xpos, ypos))]
+    else:
+        starting_layer = []
+        xsize, ysize = world.size
+        for y in range(ysize):
+            starting_layer.append(flood_fill.get_point((0, y)))
+
+    flood_fill.flood_fill(starting_layer)    
     world.save('flood_fill.png')
