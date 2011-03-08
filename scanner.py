@@ -23,13 +23,13 @@ if __name__ == '__main__':
     else:
         starting_layer = []
         xsize, ysize = world.size
-        for y in range(ysize):
-            starting_layer.append(flood_filler.get_point((0, y)))
+        for x in range(xsize):
+            starting_layer.append(flood_filler.get_point((x, 0)))
 
     flood_filler.flood_fill(starting_layer)    
     world.save('flood_fill.png')
     
-    while True:
+    if True:
         try:
             world2 = world.copy()
             world_data2 = world2.load()
@@ -50,4 +50,4 @@ if __name__ == '__main__':
             traceback.print_exc(e)
             print 'broken'
         print 'finished'
-        raw_input()
+      #  raw_input()
