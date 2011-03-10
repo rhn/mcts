@@ -166,7 +166,7 @@ class FloodFill:
         def get_neighbors(point):
             return (neighbor for neighbor in self.get_neighbors(point) if not neighbor.visited)
         
-        distance = 0
+        distance = 1
         while layer:
             for point in layer:
                 point.visited = True

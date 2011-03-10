@@ -30,6 +30,8 @@ class DistanceThinner:
         distances = self.get_sorted_points()
         
         if 0 in distances: # there are walls in it
+            print 'dupa'
+            raw_input()
             for point in distances[0]:
                 del self.points[point.position]
             del distances[0]
