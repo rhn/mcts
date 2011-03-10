@@ -1,3 +1,11 @@
+def dilate(layer, get_neighbors):
+    new_layer = set()
+    for point in layer:
+        for neighbor in get_neighbors(point):
+            new_layer.add(neighbor)
+    return new_layer
+    
+
 class Point:
     def __init__(self, world, position, value):
         self.world_data = world
@@ -145,11 +153,38 @@ class FloodFill:
             layer = self.expand(layer)
             self.mark_generation(layer, i)   
 
+
+    def dilate(self):
+        print 'reading level'
+        layer = [point for point in self.get_points() if not point.is_air()]
+        print 640*400 - len(layer)
+        for point in layer:
+            if point.is_air():
+                raise Exception
+        
+        print 'dilating'        
+        def get_neighbors(point):
+            return (neighbor for neighbor in self.get_neighbors(point) if not neighbor.visited)
+        
+        distance = 0
+        while layer:
+            for point in layer:
+                point.visited = True
+            self.generation = distance
+            #print layer
+            #raw_input()
+            layer = dilate(layer, get_neighbors)
+            for point in layer:
+                point.distance_from_wall = distance
+            self.mark_generation(layer, distance)  
+            distance += 1
+
+
     def mark_generation(self, layer, generation_number):
         for point in layer:
-            point.mark_generation_number(generation_number)
-        if generation_number % 100 == 0:
-            self.image.save(str(generation_number) + '.png')
+            point.mark_distance_from_wall()
+        #if generation_number % 1 == 0:
+            #self.image.save(str(generation_number) + '.png')
             
         print 'generation {0}, points on the edge: {1}'.format(generation_number, len(layer))
             #raw_input()
@@ -167,6 +202,11 @@ class ImageFloodFill(FloodFill):
         self.world_data = image.load()
         self.image = image
         self.points = {}
+    
+    def get_points(self):
+        for x in range(self.minx, self.maxx):
+            for y in range(self.miny, self.maxy):
+                yield self.get_point((x, y))
     
     def get_point(self, position):
         if position not in self.points:
