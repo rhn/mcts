@@ -148,8 +148,8 @@ class FloodFill:
     def mark_generation(self, layer, generation_number):
         for point in layer:
             point.mark_generation_number(generation_number)
-  #      if generation_number % 100 == 0:
-   #         self.image.save(str(generation_number) + '.png')
+        if generation_number % 100 == 0:
+            self.image.save(str(generation_number) + '.png')
             
         print 'generation {0}, points on the edge: {1}'.format(generation_number, len(layer))
             #raw_input()

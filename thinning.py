@@ -2,9 +2,15 @@ class DistanceThinner:
     def __init__(self, points):
         self.points = points
 
-    def is_maximum(self, point, neighbors):
+    def is_local_peak(self, point, neighbors):
         for neighbor in neighbors:
             if neighbor.distance_from_wall >= point.distance_from_wall:
+                return False
+        return True
+    
+    def is_local_maximum(self, point, neighbors):
+        for neighbor in neighbors:
+            if neighbor.distance_from_wall > point.distance_from_wall:
                 return False
         return True
 
@@ -33,7 +39,7 @@ class DistanceThinner:
         print 'thinning'
         print
         
-        maxima = []
+        peaks = []
         unremoved = set()
         
         for distance in sorted(distances.keys()):
@@ -55,9 +61,9 @@ class DistanceThinner:
                 for point in list(points):
                     neighbors = self.get_neighbors(point)
                     
-                    if self.is_maximum(point, neighbors):
+                    if self.is_local_peak(point, neighbors):
                         points.remove(point)
-                        maxima.append(point)
+                        peaks.append(point)
                         point.mark_maximum()
                     elif self.is_expendable(point, neighbors):
                         del self.points[point.position] # deletion must be immediate. otherwise two neighboring maxima would both either stay or erase
@@ -72,16 +78,18 @@ class DistanceThinner:
                 #print '\t\t{0}: removed {1}'.format(i, iterdel)
                 #self.image.save('thin-' + str(distance) + '-' + str(i) + '.png')
             unremoved = points
-            
- #           print '\tRemoved {0} points in {1} iterations, left {2}'.format(deleted, i, len(unremoved))
-#            self.image.save('thin-' + str(distance) + '.png')
+            if distance < 10:            
+                print '\tRemoved {0} points in {1} iterations, left {2}'.format(deleted, i, len(unremoved))
+                self.image.save('thin-' + str(distance) + '.png')
             #raw_input()
             
         for point in unremoved:
             point.mark_final()
         
         print 'Thinning finished with {0} points left out of {1}'.format(len(unremoved), total_points)
-
+        self.unremoved = unremoved
+        self.peaks = peaks
+        
 
 class ImageDistanceThinner(DistanceThinner):
     def get_neighbors(self, point):
@@ -104,6 +112,20 @@ class ImageDistanceThinner(DistanceThinner):
         #check if otherwise expendable
         
         if len(neighbors) == 1:
+            # This is responsible for hooking into ends of tunels.
+            # If this is the peak, then we hit an elongated maximum field.
+            # It's quite possible a tunnel has parallel walls, and we want to keep its end.
+            #
+            # If the field of local maxima is wider than 1, then some "biting in" may occur.
+            # In that case, appendices may be created that will have 1 neighbor only.
+            # These appendices can only be 1-long in 2D, since the local maximum field will
+            # not be wider than 2. If it was 3, a local maximum would be created in the middle instead
+            
+            # AND IT DOESN'T WORK! equality fields can happen in caves where one point is connected to 
+            # something bigger and others are not.
+            # 
+            # return not self.is_local_maximum(point, neighbors)
+            
             return True
         
         if len(neighbors) == 2: # Two possibilities: corner or connection
@@ -139,6 +161,5 @@ class ImageDistanceThinner(DistanceThinner):
                         
             if connecting_points == 2:
                 return True
-            
         
         return False # unknown case, should stay
