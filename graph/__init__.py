@@ -10,13 +10,29 @@ def dilate(layer, get_neighbors):
 
 
 class Tunnel:
-    def __init__(self, start, end, data=None):
+    def __init__(self, start, end, start_neighbor, end_neighbor, data=None):
         self.start = start
         self.end = end
+        self.start_neighbor = start_neighbor
+        self.end_neighbor = end_neighbor
         self.data = data
+        
+    def __eq__(self, tunnel):
+        try:
+            other_start = tunnel.start
+            other_end = tunnel.end
+            other_start_neighbor = tunnel.start_neighbor
+            other_end_neighbor = tunnel.end_neighbor
+        except AttributeError:
+            return False
+        if self.start != other_start:
+            other_start, other_end = other_end, other_start
+            other_start_neighbor, other_end_neighbor = other_end_neighbor, other_start_neighbor
+        return self.start == other_start and self.end == other_end and self.start_neighbor == other_start_neighbor and self.end_neighbor == other_end_neighbor
 
     def __repr__(self):
         return 'T(' + str(self.start) + ', ' + str(self.end) + ')'
+        
         
 class TunnelEdge(backend.Edge):
     def __init__(self, tunnel):
@@ -43,6 +59,13 @@ class JunctionNode(Node):
     def __init__(self, junction):
         Node.__init__(self, junction)
 #        self.set_size_width(junction.distance_from_wall)
+
+
+def tunnel_in_container(container, tunnel):
+    for element in container:
+        if tunnel == element:
+            return True
+    return False
 
 
 class Grapher:
@@ -75,7 +98,8 @@ class Grapher:
     def find_tunnel(self, beginning, tentacle):
         # dimension-agnostic!
         finish = None
-
+        beginning_neighbor = tentacle
+        
         previous = beginning
         while True:
             green = tentacle.value[1]
@@ -100,8 +124,9 @@ class Grapher:
             
             previous, tentacle = tentacle, next
         
-        self.image.save('tunnel-' + str(self.tunnelno) + '.png')
-        return Tunnel(beginning, finish), finish
+        end_neighbor = previous
+#        self.image.save('tunnel-' + str(self.tunnelno) + '.png')
+        return Tunnel(beginning, finish, beginning_neighbor, end_neighbor), finish
         
     
     def find_structure(self, point):
@@ -114,6 +139,7 @@ class Grapher:
         while unchecked_points:
             points_to_check = unchecked_points
             unchecked_points = []
+#            print 'and again'
             for point in points_to_check:
                 junctions.append(point)
                 point.visited = True
@@ -121,9 +147,13 @@ class Grapher:
                 for tentacle in self.get_neighbors(point):
                     tunnel, ending = self.find_tunnel(point, tentacle)
                     self.tunnelno += 1
-                    tunnels.append(tunnel)
+#                    print tunnel
+                    if not tunnel_in_container(tunnels, tunnel):
+#                        print 'accepted'
+                        tunnels.append(tunnel)
                     if not ending.visited:
                         unchecked_points.append(ending)
+                    raw_input()
                         
         return junctions, tunnels
         
@@ -163,7 +193,8 @@ class Grapher:
         
         junctions, tunnels = self.find_structure(start_point)
         
-        print tunnels
+        print 'found {0} tunnels and {1} junctions'.format(len(tunnels), len(junctions))
         
         nodes, edges = self.extract_features(junctions, tunnels)
+        print 'found {0} edges connecting {1} nodes'.format(len(edges), len(nodes))
         backend.save('map.png', nodes, edges)
