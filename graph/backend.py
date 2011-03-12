@@ -7,12 +7,10 @@ class Node(pydot.Node):
         self.set_fill_color(None)
     
     def set_size(self, size):
-        print 'size', size
         self.set('width', str(size[0] / self.scale))
         self.set('height', str(size[1] / self.scale))
         
-    def set_width(self, width):
-        print 'width', width
+    def set_size_width(self, width):
         self.set('width', str(width / self.scale))
     
     def set_fill_color(self, color):

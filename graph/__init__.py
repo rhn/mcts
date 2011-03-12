@@ -15,6 +15,8 @@ class Tunnel:
         self.end = end
         self.data = data
 
+    def __repr__(self):
+        return 'T(' + str(self.start) + ', ' + str(self.end) + ')'
         
 class TunnelEdge(backend.Edge):
     def __init__(self, tunnel):
@@ -23,14 +25,14 @@ class TunnelEdge(backend.Edge):
 
 class Node(backend.Node):
     def __init__(self, junction):
-        backend.Node.__init__(self, str(junction))
+        backend.Node.__init__(self, str(junction))#str(junction.distance_from_wall))
         junction.node = self
 
 
 class EndingNode(Node):
     def __init__(self, ending):
         Node.__init__(self, ending)
-        self.set_size(3)
+#        self.set_size(3)
         self.set_fill_color((255, 0, 0))
     
     def set_size(self, size):
@@ -40,7 +42,7 @@ class EndingNode(Node):
 class JunctionNode(Node):
     def __init__(self, junction):
         Node.__init__(self, junction)
-        self.set_width(junction.distance_from_wall)
+#        self.set_size_width(junction.distance_from_wall)
 
 
 class Grapher:
@@ -76,6 +78,12 @@ class Grapher:
 
         previous = beginning
         while True:
+            green = tentacle.value[1]
+            if green != 0:
+                green = 0
+            else:
+                green = 255
+            tentacle.set_green(green)
             if tentacle.visited:
                 finish = tentacle
                 break
@@ -91,7 +99,8 @@ class Grapher:
                 next = n1
             
             previous, tentacle = tentacle, next
-                
+        
+        self.image.save('tunnel-' + str(self.tunnelno) + '.png')
         return Tunnel(beginning, finish), finish
         
     
@@ -99,7 +108,7 @@ class Grapher:
         """depth-first search of all nodes, extracts junctions and tunnels"""
         junctions = []
         tunnels = []
-        
+        self.tunnelno = 0
         unchecked_points = [point]
         
         while unchecked_points:
@@ -111,6 +120,7 @@ class Grapher:
 
                 for tentacle in self.get_neighbors(point):
                     tunnel, ending = self.find_tunnel(point, tentacle)
+                    self.tunnelno += 1
                     tunnels.append(tunnel)
                     if not ending.visited:
                         unchecked_points.append(ending)
@@ -131,7 +141,7 @@ class Grapher:
                 raise ValueError("impossible! 2 neighbors.", junction)
             else:
                 node = JunctionNode(junction)
-            nodes.append(node)
+            nodes.append(node)      
                 
         for tunnel in tunnels:
             edges.append(TunnelEdge(tunnel))
@@ -152,6 +162,8 @@ class Grapher:
                break
         
         junctions, tunnels = self.find_structure(start_point)
+        
+        print tunnels
         
         nodes, edges = self.extract_features(junctions, tunnels)
         backend.save('map.png', nodes, edges)

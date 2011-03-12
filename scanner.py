@@ -15,7 +15,7 @@ def copy_data(world, points):
         new_point = flood_fill.Pixel(world_data2, position, point.value)
         new_point.distance_from_wall = point.distance_from_wall
         new_points[position] = new_point
-    return world, new_points
+    return world2, new_points
     
 
 if __name__ == '__main__':
