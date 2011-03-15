@@ -1,0 +1,41 @@
+README and TODO and BUGS and LICENSE
+
+README:
+    Glossary:
+        point - wrapper around the point object of the map. Points on the map are not going to be accessed by any other means. Contains references to clumps
+        ending - point that has only 1 neighbor and wasn't removed by thinning
+        junction - point that has more than 2 neighbors and couldn't be removed by thinning
+        
+        tunnel - a structure marking a 1-width section of the map
+        clump - combines multiple neighboring junctions. May grow into a cave or ending or sth similar.
+        cave, dead end, world - different classifications of clumps
+        world - in 3D a clump that contains a 3D space inside it
+        
+        node - clump after processing or after graphing
+        
+TODO:
+    everything:
+        make sure 3D comes easily
+    graph:
+        simplify_structure needs to combine clumps that are nearby using some smart heuristics
+        clumps, tunnels must be made into a separate object after first phase of extraction is complete. Will contain:
+            connect_clumps
+            simplify_structure
+            extract_diagram
+        
+        node and edge conversion to printing form should be moved into Node, Tunnel and subclasses
+            Node.get_graph_representation()
+            find a way to present it nicely
+        
+        split grapher into 2 classes: general and 2D
+        
+        clump resolution:
+            world, flat cave:
+                1. dilate X times (for 3D and stupid distance it's 2) to get cave all covered. dilate over anything, including space and tunnels
+                2. flood fill every resulting surface to count surfaces
+                3. if 1 surface, it's not a world. Otherwise, continue
+                4. keep dilating until all but one surfaces can't be dilated any more (or other heuristic to find which one is outside. moving straight up?)
+                5. AND dilated surfaces and world and save in separate graphers
+                6. remove points from graphers
+                7. graph each world and save it inside world. will be accessible by Node.get_graph_representation()
+               
