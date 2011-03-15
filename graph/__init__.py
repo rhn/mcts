@@ -9,7 +9,7 @@ def dilate(layer, get_neighbors):
     return new_layer
 
 
-class Tunnel:
+class Tunnel: # could be sort of a partially-mutable object. start* and end* are never going to change
     def __init__(self, start, end, start_neighbor, end_neighbor, data=None):
         self.start = start
         self.end = end
@@ -43,12 +43,26 @@ class Node:
     def __init__(self, points):
         self.points = points
         self.diagram_node = None
+        self.connections = [] # pairs: tunnel, neighbor node
     
     def get_diagram_representation(self):
         raise NotImplementedError
     
+    def get_avg_size(self):
+        size = 0
+        for point in self.points:
+            size += point.get_distance_from_wall
+        return size / len(self.points)
+    
+    def get_avg_position(self):
+        x, y = 0, 0
+        for point in self.points:
+            x += point.position[0]
+            y += point.position[1]
+        return (x / len(self.points), y / len(self.points))
+
     def __repr__(self):
-        return str(self.points[0])
+        return 'N({0}: {1}, {2})'.format(len(self.points), self.get_avg_position(), self.get_avg_size())
 
 
 def tunnel_in_container(container, tunnel):
@@ -57,6 +71,18 @@ def tunnel_in_container(container, tunnel):
         if tunnel == element:
             return True
     return False
+
+
+def connect_clumps(tunnels):
+    """Adds references to each other to nodes conected with tunnels"""
+    for tunnel in tunnels:
+        beginning_node, finish_node = tunnel.start.node, tunnel.end.node
+        beginning_node.connections.append((tunnel, finish_node))
+        finish_node.connections.append((tunnel, beginning_node))
+
+
+def simplify_structure(clumps, tunnels):
+    pass
 
 
 class Grapher:
@@ -171,8 +197,7 @@ class Grapher:
 #                    raw_input()
                         
         return clumps, tunnels
-        
-        
+    
     def extract_diagram(self, clumps, tunnels):
         """Converts clumps and tunnels to graph nodes and edges to be presented
         on the final map.
@@ -198,11 +223,13 @@ class Grapher:
         print '{0} endings and {1} junctions'.format(endings, junctions)
         for tunnel in tunnels:
             edges.append(TunnelEdge(tunnel))
-        return nodes, edges  
-    
+        return nodes, edges          
     
     def make_graph(self):
         clumps, tunnels = self.find_structure()
+
+        connect_clumps(tunnels)
+        simplify_structure(clumps, tunnels)
 
         print 'found {0} tunnels and {1} clumps'.format(len(tunnels), len(clumps))
         
