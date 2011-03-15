@@ -52,3 +52,25 @@ def save(filename, nodes, edges):
     with open(filename, 'w') as output:
         output.write(graph.create(prog='neato -s', format='png'))
     return graph
+    
+    
+class ClumpNode(Node):
+    def __init__(self, clump):
+        Node.__init__(self, str(clump.points[0]))#str(junction.distance_from_wall))
+
+
+class EndingNode(ClumpNode):
+    def __init__(self, ending):
+        ClumpNode.__init__(self, ending)
+#        self.set_size(3)
+        self.set_fill_color((255, 0, 0))
+    
+    def set_size(self, size):
+        return ClumpNode.set_size(self, (size, size))
+
+
+class JunctionNode(ClumpNode):
+    def __init__(self, junction):
+        ClumpNode.__init__(self, junction)
+#        self.set_size_width(junction.distance_from_wall)
+

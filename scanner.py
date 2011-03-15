@@ -47,6 +47,8 @@ if __name__ == '__main__':
     
     while True:
         try:
+            reload(graph.backend)
+            reload(graph)
             print 'copying'
             world2, points2 = copy_data(world, thinner.points)
             print 'done copying'

@@ -36,29 +36,19 @@ class Tunnel:
         
 class TunnelEdge(backend.Edge):
     def __init__(self, tunnel):
-        backend.Edge.__init__(self, tunnel.start.node, tunnel.end.node)
+        backend.Edge.__init__(self, tunnel.start.node.diagram_node, tunnel.end.node.diagram_node)
 
 
-class Node(backend.Node):
-    def __init__(self, junction):
-        backend.Node.__init__(self, str(junction))#str(junction.distance_from_wall))
-        junction.node = self
-
-
-class EndingNode(Node):
-    def __init__(self, ending):
-        Node.__init__(self, ending)
-#        self.set_size(3)
-        self.set_fill_color((255, 0, 0))
+class Node:
+    def __init__(self, points):
+        self.points = points
+        self.diagram_node = None
     
-    def set_size(self, size):
-        return Node.set_size(self, (size, size))
-
-
-class JunctionNode(Node):
-    def __init__(self, junction):
-        Node.__init__(self, junction)
-#        self.set_size_width(junction.distance_from_wall)
+    def get_diagram_representation(self):
+        raise NotImplementedError
+    
+    def __repr__(self):
+        return str(self.points[0])
 
 
 def tunnel_in_container(container, tunnel):
@@ -71,18 +61,6 @@ def tunnel_in_container(container, tunnel):
 class Grapher:
     def __init__(self, points):
         self.points = points  
-        
-    def find_endings(self):
-        for position, point in self.points.items():
-            neighbors = self.get_neighbors(point)
-            if len(neighbors) == 1:
-                yield point
-    
-    def find_junctions(self):
-        for position, point in self.points.items():
-            neighbors = self.get_neighbors(point)
-            if len(neighbors) > 2:
-                yield point
     
     def get_neighbors(self, point):
         """Copied from thinning"""
@@ -95,106 +73,134 @@ class Grapher:
                 neighbors.append(self.points[position])
         return neighbors
         
-    def find_tunnel(self, beginning, tentacle):
+    def find_tunnel(self, tentacle):
         # dimension-agnostic!
+        beginning, direction = tentacle
         finish = None
-        beginning_neighbor = tentacle
+        beginning_neighbor = direction
         
         previous = beginning
+        current = beginning_neighbor
+        
         while True:
-            green = tentacle.value[1]
+            green = current.value[1]
             if green != 0:
                 green = 0
             else:
                 green = 255
-            tentacle.set_green(green)
-            if tentacle.visited:
-                finish = tentacle
+            current.set_green(green)
+
+            neighbors = self.get_neighbors(current)
+            if len(neighbors) != 2:
+                finish = current
                 break
 
-            neighbors = self.get_neighbors(tentacle)
-            if len(neighbors) != 2:
-                finish = tentacle
-                break
             n1, n2 = neighbors
             if n1 is previous:
                 next = n2
             else:
                 next = n1
             
-            previous, tentacle = tentacle, next
+            previous, current = current, next
         
         end_neighbor = previous
 #        self.image.save('tunnel-' + str(self.tunnelno) + '.png')
         return Tunnel(beginning, finish, beginning_neighbor, end_neighbor), finish
         
+    def mark_clump(self, point):
+        """Finds connected points that are not part of tunnels, assigns a single
+        node for all of them and returns the node.
+        """
+        # TODO: flood fill it properly
+        node = Node([point])
+        point.node = node
     
-    def find_structure(self, point):
-        """depth-first search of all nodes, extracts junctions and tunnels"""
-        junctions = []
+    def get_node_neighbors(self, node):
+        neighbors = []
+        for point in node.points:
+            for neighbor in self.get_neighbors(point):
+                if neighbor.node != node:
+                    neighbors.append((point, neighbor))
+        return neighbors
+    
+    def find_structure(self):
+        """depth-first search of all points, extracts junctions(nodes) and tunnels"""
+        
+        starting_point = None
+        # firse initalize points
+        for point in self.points.values():
+            point.node = None
+            neighbors = self.get_neighbors(point)
+            if len(neighbors) != 2:
+                starting_point = point
+        
+        if starting_point is None:
+            raise Exception("Couldn't detect any junction in the thinned map.")
+        
+        clumps = []
         tunnels = []
         self.tunnelno = 0
-        unchecked_points = [point]
+        unchecked_points = [starting_point]
         
         while unchecked_points:
             points_to_check = unchecked_points
             unchecked_points = []
 #            print 'and again'
             for point in points_to_check:
-                junctions.append(point)
-                point.visited = True
+ #               print point
+  #              if point.node:
+   #                 raise Exception("jak nie zonk, to co?")
+                self.mark_clump(point)
+                clumps.append(point.node)
 
-                for tentacle in self.get_neighbors(point):
-                    tunnel, ending = self.find_tunnel(point, tentacle)
+                for tentacle in self.get_node_neighbors(point.node):
+                    # tentacle is a pair of points: beginning, direction
+                    tunnel, ending = self.find_tunnel(tentacle)
                     self.tunnelno += 1
-#                    print tunnel
                     if not tunnel_in_container(tunnels, tunnel):
-#                        print 'accepted'
                         tunnels.append(tunnel)
-                    if not ending.visited:
+                    if ending.node is None and ending not in points_to_check:
+    #                    print '\tadding', ending
                         unchecked_points.append(ending)
-                    raw_input()
+#                    raw_input()
                         
-        return junctions, tunnels
+        return clumps, tunnels
         
-    def extract_features(self, junctions, tunnels):
-        # this line is a good place to simplify junctions into huge caves or worlds
-    
+        
+    def extract_diagram(self, clumps, tunnels):
         nodes = []
         edges = []
+        endings = 0
+        junctions = 0
         
-        for junction in junctions:
-            neighbors_count = len(self.get_neighbors(junction))
+        for clump in clumps:
+            # move this code to clump.get_diagram_representation()
+            neighbors_count = len(self.get_node_neighbors(clump))
             if neighbors_count == 1:
-                node = EndingNode(junction)
+                node = backend.EndingNode(clump)
+                endings += 1
             elif neighbors_count == 2:
-                raise ValueError("impossible! 2 neighbors.", junction)
+                raise ValueError("impossible! 2 neighbors.", clump)
             else:
-                node = JunctionNode(junction)
+                node = backend.JunctionNode(clump)
+                junctions += 1
+            clump.diagram_node = node
             nodes.append(node)      
-                
+        print '{0} endings and {1} junctions'.format(endings, junctions)
         for tunnel in tunnels:
             edges.append(TunnelEdge(tunnel))
         return nodes, edges  
     
+    
     def make_graph(self):
         """Must have at least 1 junction or ending"""
-        start_point = None
-        for position, point in self.points.items():
-            point.visited = False
-        for ending in self.find_endings():
-            start_point = ending
-            break
-            
-        if start_point is None:
-            for junction in self.find_junctions():
-               start_point = junction
-               break
         
-        junctions, tunnels = self.find_structure(start_point)
+        clumps, tunnels = self.find_structure()
+
+#        print clumps        
+        print 'found {0} tunnels and {1} clumps'.format(len(tunnels), len(clumps))
         
-        print 'found {0} tunnels and {1} junctions'.format(len(tunnels), len(junctions))
-        
-        nodes, edges = self.extract_features(junctions, tunnels)
+        nodes, edges = self.extract_diagram(clumps, tunnels)
+
         print 'found {0} edges connecting {1} nodes'.format(len(edges), len(nodes))
         backend.save('map.png', nodes, edges)
