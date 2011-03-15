@@ -38,4 +38,7 @@ TODO:
                 5. AND dilated surfaces and world and save in separate graphers
                 6. remove points from graphers
                 7. graph each world and save it inside world. will be accessible by Node.get_graph_representation()
-               
+    display:
+        node sizes
+    thinning:
+        wall type preserving towards the middle

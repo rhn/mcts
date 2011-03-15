@@ -9,14 +9,28 @@ def dilate(layer, get_neighbors):
     return new_layer
 
 
-class Tunnel: # could be sort of a partially-mutable object. start* and end* are never going to change
+class Tunnel: # could be sort of a partially-mutable object for set lookup. start* and end* are never going to change
     def __init__(self, start, end, start_neighbor, end_neighbor, data=None):
         self.start = start
         self.end = end
         self.start_neighbor = start_neighbor
         self.end_neighbor = end_neighbor
         self.data = data
-        
+    
+    def merge_endpoints(self):
+        points = self.start.node.points + self.end.node.points
+        # TODO: merge node data, add tunnel data (points?) would be nice for volume calc
+        # TODO: find the best class after joining:
+        #    DE  J   C   W
+        # DE C   J/C C   W
+        # J      J/C C   W
+        # C          C   W
+        # W              W
+        clump = Cave(points)
+        for point in points:
+            point.node = clump
+        return clump
+    
     def __eq__(self, tunnel):
         try:
             other_start = tunnel.start
@@ -36,22 +50,29 @@ class Tunnel: # could be sort of a partially-mutable object. start* and end* are
         
 class TunnelEdge(backend.Edge):
     def __init__(self, tunnel):
-        backend.Edge.__init__(self, tunnel.start.node.diagram_node, tunnel.end.node.diagram_node)
+        backend.Edge.__init__(self, tunnel.start.node.get_root_diagram_node(), tunnel.end.node.get_root_diagram_node())
 
 
-class Node:
+class Clump:
     def __init__(self, points):
         self.points = points
-        self.diagram_node = None
-        self.connections = [] # pairs: tunnel, neighbor node
+        self._root_diagram_node = None
+        self._diagram_representation = None
     
     def get_diagram_representation(self):
-        raise NotImplementedError
+        if self._diagram_representation is None:
+            self._create_diagram_representation()
+        return self._diagram_representation
+    
+    def get_root_diagram_node(self):
+        if self._root_diagram_node is None:
+            self._create_diagram_representation()
+        return self._root_diagram_node
     
     def get_avg_size(self):
         size = 0
         for point in self.points:
-            size += point.get_distance_from_wall
+            size += point.distance_from_wall
         return size / len(self.points)
     
     def get_avg_position(self):
@@ -65,6 +86,18 @@ class Node:
         return 'N({0}: {1}, {2})'.format(len(self.points), self.get_avg_position(), self.get_avg_size())
 
 
+class DeadEnd(Clump):
+    def _create_diagram_representation(self):
+        self._root_diagram_node = backend.EndingNode(self)
+        self._diagram_representation = [self._root_diagram_node], []
+        
+        
+class Cave(Clump):
+    def _create_diagram_representation(self):
+        self._root_diagram_node = backend.JunctionNode(self)
+        self._diagram_representation = [self._root_diagram_node], []
+
+
 def tunnel_in_container(container, tunnel):
     """Performs a search over container using __eq__ comparison and not hash"""
     for element in container:
@@ -73,17 +106,70 @@ def tunnel_in_container(container, tunnel):
     return False
 
 
-def connect_clumps(tunnels):
-    """Adds references to each other to nodes conected with tunnels"""
-    for tunnel in tunnels:
-        beginning_node, finish_node = tunnel.start.node, tunnel.end.node
-        beginning_node.connections.append((tunnel, finish_node))
-        finish_node.connections.append((tunnel, beginning_node))
+class CaveGraph:
+    def __init__(self, clumps, tunnels):
+        self.clumps = clumps
+        self.tunnels = tunnels
+        
+    def get_distance(self, point1, point2):
+        # 2D
+        return abs(point1.position[0] - point2.position[0]) + abs(point1.position[1] - point2.position[1])
 
+    def simplify(self):
+        """Smart heuristics to join node into caves. In this implementation, if
+        one endpoint of a tunnel lies within the radius of another, join them
+        together.
+        """
+        
+        added_clumps = []
+        staying_tunnels = []
+        removed_clumps = set()
+        
+        for tunnel in self.tunnels:
+            tunnel_end_distance = self.get_distance(tunnel.start, tunnel.end)
+            if tunnel_end_distance - tunnel.start.distance_from_wall < 0 or \
+                    tunnel_end_distance - tunnel.end.distance_from_wall < 0:
+                removed_clumps.add(tunnel.start.node)
+                removed_clumps.add(tunnel.end.node)
+                new_node = tunnel.merge_endpoints()
+                added_clumps.append(new_node)
+            else:
+                staying_tunnels.append(tunnel)
+        print removed_clumps
+        
+        new_clumps = []
+        
+        for clump in self.clumps + added_clumps:
+            if clump not in removed_clumps:
+                new_clumps.append(clump)
+            else:
+                removed_clumps.remove(clump)
+        print removed_clumps
+        if removed_clumps:
+            raise Exception("Some removed clumps couldn't be found in the main set and I'm scared")
+        
+        self.clumps = new_clumps
+        self.tunnels = staying_tunnels
+#        print self.tunnels
 
-def simplify_structure(clumps, tunnels):
-    pass
-
+    def extract_diagram(self):
+        """Converts clumps and tunnels to graph nodes and edges to be presented
+        on the final map.
+        """
+        nodes = []
+        edges = []
+        
+        for clump in self.clumps:
+            new_nodes, new_edges = clump.get_diagram_representation()
+            nodes.extend(new_nodes)
+            edges.extend(new_edges)
+            #nodes.append(backend.JunctionNode(clump))
+        # TODO: move to Tunnel.get_diagram_representation()
+        for tunnel in self.tunnels:
+#            print tunnel
+            edges.append(TunnelEdge(tunnel))
+        return nodes, edges
+    
 
 class Grapher:
     def __init__(self, points):
@@ -105,7 +191,7 @@ class Grapher:
         beginning, direction = tentacle
         finish = None
         beginning_neighbor = direction
-        
+
         previous = beginning
         current = beginning_neighbor
         
@@ -139,7 +225,13 @@ class Grapher:
         single node for all of them.
         """
         # TODO: flood fill it properly
-        node = Node([point])
+        neighbors = len(self.get_neighbors(point))
+        if neighbors == 1:
+            node = DeadEnd([point])
+        elif neighbors == 2:
+            raise Exception("WTF, 2 neighbors")
+        else:
+            node = Cave([point])
         point.node = node
     
     def get_node_neighbors(self, node):
@@ -196,44 +288,18 @@ class Grapher:
                         unchecked_points.append(ending)
 #                    raw_input()
                         
-        return clumps, tunnels
+        return CaveGraph(clumps, tunnels)
     
-    def extract_diagram(self, clumps, tunnels):
-        """Converts clumps and tunnels to graph nodes and edges to be presented
-        on the final map.
-        """
-        nodes = []
-        edges = []
-        endings = 0
-        junctions = 0
-        
-        for clump in clumps:
-            # move this code to clump.get_diagram_representation()
-            neighbors_count = len(self.get_node_neighbors(clump))
-            if neighbors_count == 1:
-                node = backend.EndingNode(clump)
-                endings += 1
-            elif neighbors_count == 2:
-                raise ValueError("impossible! 2 neighbors.", clump)
-            else:
-                node = backend.JunctionNode(clump)
-                junctions += 1
-            clump.diagram_node = node
-            nodes.append(node)      
-        print '{0} endings and {1} junctions'.format(endings, junctions)
-        for tunnel in tunnels:
-            edges.append(TunnelEdge(tunnel))
-        return nodes, edges          
     
     def make_graph(self):
-        clumps, tunnels = self.find_structure()
+        cave_graph = self.find_structure()
+        print 'found {0} tunnels and {1} clumps'.format(len(cave_graph.tunnels), len(cave_graph.clumps))
+        cave_graph.simplify()
 
-        connect_clumps(tunnels)
-        simplify_structure(clumps, tunnels)
-
-        print 'found {0} tunnels and {1} clumps'.format(len(tunnels), len(clumps))
+        print 'simplified to {0} tunnels and {1} clumps'.format(len(cave_graph.tunnels), len(cave_graph.clumps))
         
-        nodes, edges = self.extract_diagram(clumps, tunnels)
+        nodes, edges = cave_graph.extract_diagram()
 
-        print 'found {0} edges connecting {1} nodes'.format(len(edges), len(nodes))
+        print 'resulting image will be composed of {0} edges connecting {1} nodes'.format(len(edges), len(nodes))
+#        print edges
         backend.save('map.png', nodes, edges)
