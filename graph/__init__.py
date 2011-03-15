@@ -52,6 +52,7 @@ class Node:
 
 
 def tunnel_in_container(container, tunnel):
+    """Performs a search over container using __eq__ comparison and not hash"""
     for element in container:
         if tunnel == element:
             return True
@@ -108,14 +109,17 @@ class Grapher:
         return Tunnel(beginning, finish, beginning_neighbor, end_neighbor), finish
         
     def mark_clump(self, point):
-        """Finds connected points that are not part of tunnels, assigns a single
-        node for all of them and returns the node.
+        """Finds connected points that are not part of tunnels and assigns a
+        single node for all of them.
         """
         # TODO: flood fill it properly
         node = Node([point])
         point.node = node
     
     def get_node_neighbors(self, node):
+        """Returns "tentacles": pairs of (point, neighbor) where point belongs
+        to node and neighbor doesn't.
+        """
         neighbors = []
         for point in node.points:
             for neighbor in self.get_neighbors(point):
@@ -124,7 +128,9 @@ class Grapher:
         return neighbors
     
     def find_structure(self):
-        """depth-first search of all points, extracts junctions(nodes) and tunnels"""
+        """Depth-first graph traversal, extracts clumps (nodes) and tunnels
+        (edges). Graph must have at least one point that is a junction.
+        """
         
         starting_point = None
         # firse initalize points
@@ -168,6 +174,9 @@ class Grapher:
         
         
     def extract_diagram(self, clumps, tunnels):
+        """Converts clumps and tunnels to graph nodes and edges to be presented
+        on the final map.
+        """
         nodes = []
         edges = []
         endings = 0
@@ -193,11 +202,8 @@ class Grapher:
     
     
     def make_graph(self):
-        """Must have at least 1 junction or ending"""
-        
         clumps, tunnels = self.find_structure()
 
-#        print clumps        
         print 'found {0} tunnels and {1} clumps'.format(len(tunnels), len(clumps))
         
         nodes, edges = self.extract_diagram(clumps, tunnels)
