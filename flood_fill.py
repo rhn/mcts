@@ -13,6 +13,10 @@ class Point:
         else:
             self.distance_from_wall = 0
 
+    def __repr__(self):
+        return 'P(' + str(self.position) + ', ' + str(self.distance_from_wall) + ')'
+    
+    __str__ = __repr__             
 
 class Pixel(Point):
     def is_air(self):
@@ -50,22 +54,29 @@ class Pixel(Point):
         self.world_data[self.position] = (red, value, blue)
         self.value = red, value, blue
 
-    def __repr__(self):
-        return 'P(' + str(self.position) + ', ' + str(self.distance_from_wall) + ')'
-    
-    __str__ = __repr__             
-
 
 class Block(Point):
-    AIR_VALUES = (0, )
+    # XXX: values sould be normal
+    # AIR_VALUES = [mclevel.materials.Air.ID]
+    AIR_VALUES = [mclevel.materials.Cobblestone.ID] + [mclevel.materials.WoodPlanks.ID, mclevel.materials.Wood.ID, mclevel.materials.Sandstone.ID]
     def is_air(self):
         return self.value in self.AIR_VALUES
     
     def mark_final(self):
         x, y, z = self.position
-        self.world_data[x%16, y%16, z] = mclevel.materials.WoodPlanks.ID
-        self.value = self.world_data[x%16, y%16, z]
+        self.value = mclevel.materials.Glass.ID
+        self.world_data[x%16, y%16, z] = self.value
 
+    def mark_distance_from_wall(self):
+        return
+        x, y, z = self.position
+        self.value = [mclevel.materials.WoodPlanks.ID, mclevel.materials.Wood.ID, mclevel.materials.Sandstone.ID][self.distance_from_wall % 3]
+        self.world_data[x%16, y%16, z] = self.value
+
+    def mark_generation_number(self, generation):
+        x, y, z = self.position
+        self.value = [mclevel.materials.WoodPlanks.ID, mclevel.materials.Wood.ID, mclevel.materials.Sandstone.ID][generation % 3]
+        self.world_data[x%16, y%16, z] = self.value
 
 class FloodFill:
     def expand_distances(self, layer):
@@ -97,14 +108,6 @@ class FloodFill:
             layer = self.expand_distances(layer)
             c += len(layer)
             self.mark_distance_from_wall(layer) # TODO: slows down everything, called many times for the same pixels
-            '''
-            for point in layer:
-                point.set_green(127)
-            self.image.save('dist-' + str(distance) + '.png')
-            for point in layer:
-                point.set_green(255)
-            #print '\tdistance {0}, points on the edge: {1}'.format(distance, len(layer))
-        '''
         if c > 0:
             print '\tdistance {0}, points processed: {1}'.format(distance, c)
            # raw_input()
@@ -163,11 +166,8 @@ class FloodFill:
     def mark_generation(self, layer, generation_number):
         for point in layer:
             point.mark_generation_number(generation_number)
-        if generation_number % 100 == 0:
-            self.image.save(str(generation_number) + '.png')
             
         print 'generation {0}, points on the edge: {1}'.format(generation_number, len(layer))
-            #raw_input()
             
     def mark_distance_from_wall(self, layer):
         for point in layer:
@@ -177,9 +177,11 @@ class FloodFill:
 class MCFloodFill(FloodFill):
     CHUNK_SIZE = 16
     CHUNK_HEIGHT = 128
+    NEIGHBORS = ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1))
     def __init__(self, world):
         self.world = world
         self.points = {}
+        self.chunk_coords = set(world.allChunks) # Chunks should never be added/removed, so this is allowed
         
     def get_starting_layer(self):
         layer = []
@@ -191,16 +193,28 @@ class MCFloodFill(FloodFill):
                     point = self.get_point((x, y, self.CHUNK_HEIGHT - 1))
                     if point.is_air():
                         layer.append(point)
-                        point.mark_final()
         return layer
     
     def get_point(self, position):
         if position not in self.points:
             x, y, z = position
-            cx, cy = x / 16, y / 16
+            cx, cy = x / self.CHUNK_SIZE, y / self.CHUNK_SIZE
             chunk = self.world.getChunk(cx, cy)
-            self.points[position] = Block(chunk.Blocks, position, chunk.Blocks[x % 16, y % 16, z])
+            self.points[position] = Block(chunk.Blocks, position, chunk.Blocks[x % self.CHUNK_SIZE, y % self.CHUNK_SIZE, z])
         return self.points[position]
+
+    def contains(self, position):
+        x, y, z = position
+        return (x / self.CHUNK_SIZE, y / self.CHUNK_SIZE) in self.chunk_coords and 0 <= z < 128
+
+    def get_neighbors(self, point):
+        x, y, z = point.position
+        points = []
+        for deltax, deltay, deltaz in self.NEIGHBORS:
+            neighbor_position = (x + deltax, y + deltay, z + deltaz)
+            if self.contains(neighbor_position):
+                points.append(self.get_point(neighbor_position))
+        return points
         
 
 class ImageFloodFill(FloodFill):

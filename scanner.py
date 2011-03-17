@@ -22,19 +22,17 @@ if __name__ == '__main__':
     world = mclevel.fromFile(sys.argv[1])
 
     flood_filler = flood_fill.MCFloodFill(world)
-    try:
-        layer = flood_filler.get_starting_layer()
-        print 'layer contains', len(layer), 'blocks'
-        print len([point for point in layer if point.is_air()])
-#        flood_filler.flood_fill(layer)    
-    finally:
-        print 'changing'
-        for chunk in (world.getChunk(cx, cy) for cx, cy in world.allChunks):
-            chunk.chunkChanged()
-        print 'lighting'
-        world.generateLights()
-        print 'saving'
-        world.saveInPlace()
+    layer = flood_filler.get_starting_layer()
+    print 'layer contains', len(layer), 'blocks'
+    print len([point for point in layer if point.is_air()])
+    flood_filler.flood_fill(layer)    
+    print 'changing'
+    for chunk in (world.getChunk(cx, cy) for cx, cy in world.allChunks):
+        chunk.chunkChanged()
+    print 'lighting'
+    world.generateLights()
+    print 'saving'
+    world.saveInPlace()
     print 'duping'
     raise NotImplementedException
     thinner = thinning.ImageDistanceThinner(flood_filler.points)
