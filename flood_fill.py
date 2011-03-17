@@ -1,3 +1,5 @@
+from pymclevel import mclevel
+
 class Point:
     def __init__(self, world, position, value):
         self.world_data = world
@@ -52,6 +54,17 @@ class Pixel(Point):
         return 'P(' + str(self.position) + ', ' + str(self.distance_from_wall) + ')'
     
     __str__ = __repr__             
+
+
+class Block(Point):
+    AIR_VALUES = (0, )
+    def is_air(self):
+        return self.value in self.AIR_VALUES
+    
+    def mark_final(self):
+        x, y, z = self.position
+        self.world_data[x%16, y%16, z] = mclevel.materials.WoodPlanks.ID
+        self.value = self.world_data[x%16, y%16, z]
 
 
 class FloodFill:
@@ -137,7 +150,9 @@ class FloodFill:
         '''
         return new_layer
     
-    def flood_fill(self, layer):
+    def flood_fill(self, layer=None):
+        if layer is None:
+            layer = self.get_starting_layer()
         i = 0
         while layer:
             i += 1
@@ -158,6 +173,35 @@ class FloodFill:
         for point in layer:
             point.mark_distance_from_wall()
 
+
+class MCFloodFill(FloodFill):
+    CHUNK_SIZE = 16
+    CHUNK_HEIGHT = 128
+    def __init__(self, world):
+        self.world = world
+        self.points = {}
+        
+    def get_starting_layer(self):
+        layer = []
+        for cx, cy in self.world.allChunks:
+            base_x = cx * self.CHUNK_SIZE
+            base_y = cy * self.CHUNK_SIZE
+            for x in range(base_x, base_x + self.CHUNK_SIZE):
+                for y in range(base_y, base_y + self.CHUNK_SIZE):
+                    point = self.get_point((x, y, self.CHUNK_HEIGHT - 1))
+                    if point.is_air():
+                        layer.append(point)
+                        point.mark_final()
+        return layer
+    
+    def get_point(self, position):
+        if position not in self.points:
+            x, y, z = position
+            cx, cy = x / 16, y / 16
+            chunk = self.world.getChunk(cx, cy)
+            self.points[position] = Block(chunk.Blocks, position, chunk.Blocks[x % 16, y % 16, z])
+        return self.points[position]
+        
 
 class ImageFloodFill(FloodFill):
     def __init__(self, image):

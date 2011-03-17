@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import Image
+from pymclevel import mclevel
 import sys
 
 import flood_fill
@@ -19,27 +19,24 @@ def copy_data(world, points):
     
 
 if __name__ == '__main__':
-    world = Image.open(sys.argv[1])
+    world = mclevel.fromFile(sys.argv[1])
 
-    flood_filler = flood_fill.ImageFloodFill(world)
-    if len(sys.argv) == 4:
-        xpos = int(sys.argv[2])
-        ypos = int(sys.argv[3])
-        xsize, ysize = world.size
-        
-        if xsize <= xpos or ysize <= ypos:
-            raise ValueError("Position exceeds size")
-        
-        starting_layer = [flood_filler.get_point((xpos, ypos))]
-    else:
-        starting_layer = []
-        xsize, ysize = world.size
-        for x in range(xsize):
-            starting_layer.append(flood_filler.get_point((x, 0)))
-
-    flood_filler.flood_fill(starting_layer)    
-    world.save('flood_fill.png')
-    
+    flood_filler = flood_fill.MCFloodFill(world)
+    try:
+        layer = flood_filler.get_starting_layer()
+        print 'layer contains', len(layer), 'blocks'
+        print len([point for point in layer if point.is_air()])
+#        flood_filler.flood_fill(layer)    
+    finally:
+        print 'changing'
+        for chunk in (world.getChunk(cx, cy) for cx, cy in world.allChunks):
+            chunk.chunkChanged()
+        print 'lighting'
+        world.generateLights()
+        print 'saving'
+        world.saveInPlace()
+    print 'duping'
+    raise NotImplementedException
     thinner = thinning.ImageDistanceThinner(flood_filler.points)
     thinner.image = world
     thinner.perform_thinning()

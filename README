@@ -1,7 +1,14 @@
 README and TODO and BUGS and LICENSE
 
 README:
-    Glossary:
+
+1. Requirements:
+* python2 2.5+
+* pydot
+* Python Imaging Library
+* graphviz
+
+2. Glossary:
         point - wrapper around the point object of the map. Points on the map are not going to be accessed by any other means. Contains references to clumps
         ending - point that has only 1 neighbor and wasn't removed by thinning
         junction - point that has more than 2 neighbors and couldn't be removed by thinning
