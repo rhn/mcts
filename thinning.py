@@ -25,7 +25,7 @@ class DistanceThinner:
 
     def perform_thinning(self):
         print
-        print 'sorting layers'
+        print 'sorting {0} points into layers'.format(len(self.points))
         
         distances = self.get_sorted_points()
         
@@ -36,7 +36,7 @@ class DistanceThinner:
         
         total_points = len(self.points)
         
-        print 'thinning'
+        print 'thinning {0} points'.format(total_points)
         print
         
         peaks = []
@@ -93,12 +93,12 @@ class MCDistanceThinner(DistanceThinner):
     NEIGHBORS = ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1))
     def get_neighbors(self, point):
         x, y, z = point.position
-        neighbors = NeighborContainer
+        neighbors = []
         for deltax, deltay, deltaz in self.NEIGHBORS:
             neighbor_position = (x + deltax, y + deltay, z + deltaz)
-            if neigbbor_position in self.points:
+            if neighbor_position in self.points:
                 neighbors.append(self.points[neighbor_position])
-        return points
+        return neighbors
     
     def is_expendable(self, point, neighbors):
         if len(neighbors) == 0:
@@ -148,10 +148,15 @@ class MCDistanceThinner(DistanceThinner):
             # 5 or 4
 
             #posx, posy, posz = point.position
-            positions = zip(neighbor.position for neighbor in neighbors)
-                
-            maxima, minima = filter(max, positions), filter(min, positions)
-                
+
+#            for neighbor in neighbors:
+ #               print neighbor.position 
+            
+            positions = zip(*(neighbor.position for neighbor in neighbors))
+  #          print positions
+            maxima, minima = map(max, positions), map(min, positions)
+   #         print maxima
+    #        print minima
             if len(neighbors) == 4: # 2 options: cross or part of block
                 if 0 in minima: # cross connection. removal will make a hole
                     return False
