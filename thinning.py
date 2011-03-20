@@ -81,8 +81,8 @@ class DistanceThinner:
                 print '\tRemoved {0} points in {1} iterations, left {2}'.format(deleted, i, len(unremoved))
                 #self.image.save('thin-' + str(distance) + '.png')
             #raw_input()
-        for point in unremoved:
-            point.mark_final()
+        #for point in unremoved:
+       #     point.mark_final()
         
         print 'Thinning finished with {0} points left out of {1}'.format(len(unremoved), total_points)
         self.unremoved = unremoved

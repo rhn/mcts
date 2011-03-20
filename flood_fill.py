@@ -72,7 +72,7 @@ class Block(Point):
         self.world_data[x%16, y%16, z] = self.value
     
     def mark_final(self):
-        self.set_material(mclevel.materials.Glass)
+        self.set_material(mclevel.materials.Brick)
 
     def mark_maximum(self):
         self.set_material(mclevel.materials.LapisLazuliBlock)
