@@ -89,7 +89,7 @@ class DistanceThinner:
         self.peaks = peaks
         
         
-class MCDistanceThiner(DistanceThinner):
+class MCDistanceThinner(DistanceThinner):
     NEIGHBORS = ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1))
     def get_neighbors(self, point):
         x, y, z = point.position
