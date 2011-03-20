@@ -112,7 +112,7 @@ class FloodFill:
     def update_distances(self, layer):
         c = len(layer)
         start = c
-        distance = 0
+        distance = 1
 
         while layer:
             distance += 1
@@ -124,7 +124,7 @@ class FloodFill:
            # raw_input()
 
     def expand(self, layer):
-        walls_hit = set()
+        near_walls = []
         new_layer = set()
         '''
         print 'starting with'
@@ -142,10 +142,11 @@ class FloodFill:
                     if neighbor.verified:
                         possible_wall_distances.append(neighbor.distance_from_wall + 1)
                 else: # neighbor is wall
-                    walls_hit.add(neighbor)
+                    possible_wall_distances.append(1)
                     
             point.distance_from_wall = min(possible_wall_distances)
-        
+            if point.distance_from_wall == 1:
+                near_walls.append(point)
         for point in layer: # distance was updated, point is not in the front line
             point.verified = True
         '''
@@ -156,7 +157,7 @@ class FloodFill:
         print walls_hit
         '''
         self.mark_distance_from_wall(layer) # TODO: slows down everything, called many times for the same pixels
-        self.update_distances(walls_hit)
+        self.update_distances(near_walls)
         '''
         print 'new distances'
         print layer
