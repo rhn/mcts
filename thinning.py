@@ -48,8 +48,8 @@ class DistanceThinner:
             print 'max distance {0}, points: on the edge {1}, previously untouched {2},\n' \
                   '\t---- total {3}'.format(distance, len(distances[distance]), len(unremoved), len(points))
             modified = True
-            for point in points:
-                point.set_red(127)
+            #for point in points:
+             #   point.set_red(127)
 
             deleted = 0
             i = 0
@@ -68,8 +68,7 @@ class DistanceThinner:
                     elif self.is_expendable(point, neighbors):
                         del self.points[point.position] # deletion must be immediate. otherwise two neighboring maxima would both either stay or erase
                         points.remove(point)
-                        point.set_green(0)
-                        point.set_blue(0)
+                        point.mark_removed()
                         modified = True
                         deleted += 1
                  #       iterdel += 1
@@ -80,9 +79,8 @@ class DistanceThinner:
             unremoved = points
             if distance < 10:            
                 print '\tRemoved {0} points in {1} iterations, left {2}'.format(deleted, i, len(unremoved))
-                self.image.save('thin-' + str(distance) + '.png')
+                #self.image.save('thin-' + str(distance) + '.png')
             #raw_input()
-            
         for point in unremoved:
             point.mark_final()
         
@@ -90,6 +88,82 @@ class DistanceThinner:
         self.unremoved = unremoved
         self.peaks = peaks
         
+        
+class MCDistanceThiner(DistanceThinner):
+    NEIGHBORS = ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1))
+    def get_neighbors(self, point):
+        x, y, z = point.position
+        neighbors = NeighborContainer
+        for deltax, deltay, deltaz in self.NEIGHBORS:
+            neighbor_position = (x + deltax, y + deltay, z + deltaz)
+            if neigbbor_position in self.points:
+                neighbors.append(self.points[neighbor_position])
+        return points
+    
+    def is_expendable(self, point, neighbors):
+        if len(neighbors) == 0:
+            raise Exception("no neighbors! can't happen, the code is too stupid to allow these situations, let alone handle them")
+        
+        if len(neighbors) == 1:
+            return True
+        
+        if len(neighbors) == 2: # Two possibilities: corner or connection
+            posx0, posy0, posz0 = neighbors[0].position
+            posx1, posy1, posz1 = neighbors[1].position
+            
+            if abs(posx0 - posx1) == 2 or abs(posy0 - posy1) == 2 or abs(posz0 - posz1) == 2: # if neighbors opposite to each other, i.e. distances differ by 2
+                return False # connection inside a line
+            
+            # Point lies on a corner: now check if removal causes disconnections.
+            # There will be no disconections if there exists another point neighboring both neighbors.
+            # Because thinning works from lowest to highest distance, that point will never be closer to wall
+            posx, posy, posz = point.position
+            insider_position = (posx0 - (posx - posx1), posy0 - (posy - posy1), posz0 - (posz - posz1)) # TODO: check if valid
+            if insider_position in self.points: # there is another point connecting the same way
+                return True # feel free to remove me     
+            else:
+                return False
+        
+        elif len(neighbors) == 3: # 2 options: either corner or flat
+            #posx, posy, posz = point.position
+            posx0, posy0, posz0 = neighbors[0].position
+            posx1, posy1, posz1 = neighbors[1].position
+            posx2, posy2, posz2 = neighbors[2].position
+            
+            maxx, minx = max(posx0, posx1, posx2), min(posx0, posx1, posx2)
+            maxy, miny = max(posy0, posy1, posy2), min(posy0, posy1, posy2)
+            maxz, minz = max(posz0, posz1, posz2), min(posz0, posz1, posz2)
+            
+            for x in range(minx, maxx + 1):
+                for y in range(miny, maxy + 1):
+                    for z in range(minz, maxz + 1):
+                        if not (x, y, z) in self.points:
+                            return False # this point looks like a connector
+            return True # this point is a part of a solid block of 6 (if flat) or 4 (if 3D)
+       
+        elif len(neighbors) == 6:
+            return False
+        
+        else:
+            # 5 or 4
+
+            #posx, posy, posz = point.position
+            positions = zip(neighbor.position for neighbor in neighbors)
+                
+            maxima, minima = filter(max, positions), filter(min, positions)
+                
+            if len(neighbors) == 4: # 2 options: cross or part of block
+                if 0 in minima: # cross connection. removal will make a hole
+                    return False
+                
+            for x in range(minima[0], maxima[0] + 1):
+                for y in range(minima[1], maxima[1] + 1):
+                    for z in range(minima[2], maxima[2] + 1):
+                        if not (x, y, z) in self.points:
+                            return False # this point looks like a connector
+            return True # this point is a part of a solid block and is exposed on one side
+        return False # unknown case...
+
 
 class ImageDistanceThinner(DistanceThinner):
     def get_neighbors(self, point):

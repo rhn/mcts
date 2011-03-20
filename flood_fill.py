@@ -54,6 +54,10 @@ class Pixel(Point):
         self.world_data[self.position] = (red, value, blue)
         self.value = red, value, blue
 
+    def mark_removed(self):
+        self.set_green(0)
+        self.set_blue(0)
+
 
 class Block(Point):
     # XXX: values sould be normal
@@ -62,21 +66,27 @@ class Block(Point):
     def is_air(self):
         return self.value in self.AIR_VALUES
     
-    def mark_final(self):
+    def set_material(self, material):
         x, y, z = self.position
-        self.value = mclevel.materials.Glass.ID
+        self.value = material.ID
         self.world_data[x%16, y%16, z] = self.value
+    
+    def mark_final(self):
+        self.set_material(mclevel.materials.Glass)
+
+    def mark_maximum(self):
+        self.set_material(mclevel.materials.LapisLazuliBlock)
 
     def mark_distance_from_wall(self):
         return
-        x, y, z = self.position
-        self.value = [mclevel.materials.WoodPlanks.ID, mclevel.materials.Wood.ID, mclevel.materials.Sandstone.ID][self.distance_from_wall % 3]
-        self.world_data[x%16, y%16, z] = self.value
+        self.set_material([mclevel.materials.WoodPlanks, mclevel.materials.Wood, mclevel.materials.Sandstone][self.distance_from_wall % 3])
 
     def mark_generation_number(self, generation):
-        x, y, z = self.position
-        self.value = [mclevel.materials.WoodPlanks.ID, mclevel.materials.Wood.ID, mclevel.materials.Sandstone.ID][generation % 3]
-        self.world_data[x%16, y%16, z] = self.value
+        self.set_material([mclevel.materials.WoodPlanks, mclevel.materials.Wood, mclevel.materials.Sandstone][generation % 3])
+    
+    def mark_removed(self):
+        self.set_material(mclevel.materials.Glass)
+
 
 class FloodFill:
     def expand_distances(self, layer):
@@ -101,6 +111,7 @@ class FloodFill:
 
     def update_distances(self, layer):
         c = len(layer)
+        start = c
         distance = 0
 
         while layer:
@@ -109,7 +120,7 @@ class FloodFill:
             c += len(layer)
             self.mark_distance_from_wall(layer) # TODO: slows down everything, called many times for the same pixels
         if c > 0:
-            print '\tdistance {0}, points processed: {1}'.format(distance, c)
+            print '\tdistance {0}, points processed: {1} updated: {2}'.format(distance, start, c)
            # raw_input()
 
     def expand(self, layer):
@@ -164,12 +175,13 @@ class FloodFill:
             self.mark_generation(layer, i)   
 
     def mark_generation(self, layer, generation_number):
+        print 'generation {0}, points on the edge: {1}'.format(generation_number, len(layer))
+        return
         for point in layer:
             point.mark_generation_number(generation_number)
             
-        print 'generation {0}, points on the edge: {1}'.format(generation_number, len(layer))
-            
     def mark_distance_from_wall(self, layer):
+        return
         for point in layer:
             point.mark_distance_from_wall()
 

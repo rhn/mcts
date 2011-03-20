@@ -16,7 +16,19 @@ def copy_data(world, points):
         new_point.distance_from_wall = point.distance_from_wall
         new_points[position] = new_point
     return world2, new_points
-    
+
+
+def save(world):
+    print 'changing'
+    for chunk in (world.getChunk(cx, cy) for cx, cy in world.allChunks):
+        chunk.chunkChanged()
+    print 'lighting'
+    world.generateLights()
+    print 'saving'
+    world.saveInPlace()
+    print 'duping'
+    raise NotImplementedError
+
 
 if __name__ == '__main__':
     world = mclevel.fromFile(sys.argv[1])
@@ -26,19 +38,11 @@ if __name__ == '__main__':
     print 'layer contains', len(layer), 'blocks'
     print len([point for point in layer if point.is_air()])
     flood_filler.flood_fill(layer)    
-    print 'changing'
-    for chunk in (world.getChunk(cx, cy) for cx, cy in world.allChunks):
-        chunk.chunkChanged()
-    print 'lighting'
-    world.generateLights()
-    print 'saving'
-    world.saveInPlace()
-    print 'duping'
-    raise NotImplementedException
-    thinner = thinning.ImageDistanceThinner(flood_filler.points)
+
+    thinner = thinning.MCDistanceThinner(flood_filler.points)
     thinner.image = world
     thinner.perform_thinning()
-    world.save('thinned.png')
+    save(world)
     
     while True:
         try:
