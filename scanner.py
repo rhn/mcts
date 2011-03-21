@@ -21,7 +21,8 @@ def copy_data(world, points):
 def save(world):
     print 'changing'
     for chunk in (world.getChunk(cx, cy) for cx, cy in world.allChunks):
-        chunk.chunkChanged()
+        if hasattr(chunk, 'modified') and chunk.modified == True:
+            chunk.chunkChanged()
     print 'lighting'
     world.generateLights()
     print 'saving'

@@ -69,7 +69,8 @@ class Block(Point):
     def set_material(self, material):
         x, y, z = self.position
         self.value = material.ID
-        self.world_data[x%16, y%16, z] = self.value
+        self.world_data.Blocks[x%16, y%16, z] = self.value
+        self.world_data.modified = True
     
     def mark_final(self):
         self.set_material(mclevel.materials.Brick)
@@ -214,7 +215,7 @@ class MCFloodFill(FloodFill):
             x, y, z = position
             cx, cy = x / self.CHUNK_SIZE, y / self.CHUNK_SIZE
             chunk = self.world.getChunk(cx, cy)
-            self.points[position] = Block(chunk.Blocks, position, chunk.Blocks[x % self.CHUNK_SIZE, y % self.CHUNK_SIZE, z])
+            self.points[position] = Block(chunk, position, chunk.Blocks[x % self.CHUNK_SIZE, y % self.CHUNK_SIZE, z])
         return self.points[position]
 
     def contains(self, position):
