@@ -147,7 +147,7 @@ class FloodFill:
 
     def expand(self, layer):
         near_walls = []
-        new_layer = []
+        new_layer = {}
         '''
         print 'starting with'
         print layer
@@ -160,19 +160,8 @@ class FloodFill:
             for neighbor in self.get_neighbors(point):
                 if self.is_air(neighbor):
                     if not neighbor[Block.VISITED]:
-                      try:
-                        found = False
-                        for element in new_layer: # hack workaround The truth value of an array with more than one element is ambiguous.
-                            if (element == neighbor).all():
-                                found = True
-                        if not found:
-                            new_layer.append(neighbor)
-                      except Exception, e:
-                        import traceback
-                        traceback.print_exc(e)
-                        print neighbor
-                        print new_layer
-                        raw_input()
+                        position = tuple(neighbor[Block.POSITION])
+                        new_layer[position] = neighbor
                     if neighbor[Block.VERIFIED]:
                         possible_wall_distances.append(neighbor[Block.DISTANCE_FROM_WALL] + 1)
                 else: # neighbor is wall
@@ -201,7 +190,7 @@ class FloodFill:
         raw_input()
         '''
         
-        return new_layer
+        return new_layer.values()
     
     def flood_fill(self, layer=None):
         if layer is None:
