@@ -64,11 +64,11 @@ class DistanceThinner:
                     if self.is_local_peak(point, neighbors):
                         points.remove(point)
                         peaks.append(point)
-                        point.mark_maximum()
+                        #point.mark_maximum()
                     elif self.is_expendable(point, neighbors):
                         del self.points[point.position] # deletion must be immediate. otherwise two neighboring maxima would both either stay or erase
                         points.remove(point)
-                        point.mark_removed()
+                        #point.mark_removed()
                         modified = True
                         deleted += 1
                  #       iterdel += 1
@@ -81,8 +81,8 @@ class DistanceThinner:
                 print '\tRemoved {0} points in {1} iterations, left {2}'.format(deleted, i, len(unremoved))
                 #self.image.save('thin-' + str(distance) + '.png')
             #raw_input()
-        #for point in unremoved:
-       #     point.mark_final()
+        for point in unremoved:
+            point.mark_final()
         
         print 'Thinning finished with {0} points left out of {1}'.format(len(unremoved), total_points)
         self.unremoved = unremoved

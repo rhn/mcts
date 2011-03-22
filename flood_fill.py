@@ -1,4 +1,12 @@
+import time
 from pymclevel import mclevel
+import numpy
+import itertools
+
+def tacho(message, total, start):
+    end = time.time()
+    print message.format(total, end - start, int((end - start) / total))
+
 
 class Point:
     def __init__(self, world, position, value):
@@ -61,10 +69,16 @@ class Pixel(Point):
 
 class Block(Point):
     # XXX: values sould be normal
-    # AIR_VALUES = [mclevel.materials.Air.ID]
+#    AIR_VALUES = [mclevel.materials.Air.ID]
     AIR_VALUES = [mclevel.materials.Cobblestone.ID] + [mclevel.materials.WoodPlanks.ID, mclevel.materials.Wood.ID, mclevel.materials.Sandstone.ID]
-    def is_air(self):
-        return self.value in self.AIR_VALUES
+    VALUE = 1
+    POSITION = 0
+    VISITED = 2
+    VERIFIED = 3
+    DISTANCE_FROM_WALL = 4
+    @staticmethod
+    def is_air(block):
+        return block.value in AIR_VALUES
     
     def set_material(self, material):
         x, y, z = self.position
@@ -89,24 +103,31 @@ class Block(Point):
         self.set_material(mclevel.materials.Glass)
 
 
+ArrayBlock = numpy.dtype([('position', (numpy.int, 3)), # position
+                          ('value', numpy.int), # value
+                          ('visited', numpy.bool), # visited
+                          ('verified', numpy.bool), # verified
+                          ('distance_from_wall', numpy.int)]) # distance from wall
+
+
 class FloodFill:
     def expand_distances(self, layer):
         new_layer = set()
         
         if layer:
-            dist = list(layer)[0].distance_from_wall
+            dist = list(layer)[0][Block.DISTANCE_FROM_WALL]
         
 #        print 'dist', dist
         
         for point in layer:
-            if point.distance_from_wall != dist:
+            if point[Block.DISTANCE_FROM_WALL] != dist:
                 print layer
                 print point, dist
                 raise Exception('point borked')
 #            print point, self.get_neighbors(point)
             for neighbor in self.get_neighbors(point):
-                if neighbor.is_air() and neighbor.visited and neighbor.distance_from_wall > point.distance_from_wall + 1:
-                    neighbor.distance_from_wall = point.distance_from_wall + 1
+                if self.is_air(neighbor) and neighbor[Block.VISITED] and neighbor[Block.DISTANCE_FROM_WALL] > point[Block.DISTANCE_FROM_WALL] + 1:
+                    neighbor[Block.DISTANCE_FROM_WALL] = point[Block.DISTANCE_FROM_WALL] + 1
                     new_layer.add(neighbor)
         return new_layer
 
@@ -126,31 +147,43 @@ class FloodFill:
 
     def expand(self, layer):
         near_walls = []
-        new_layer = set()
+        new_layer = []
         '''
         print 'starting with'
         print layer
         '''
         for point in layer:
-            point.visited = True
+            point[Block.VISITED] = True
         
         for point in layer:
-            possible_wall_distances = [point.distance_from_wall]
+            possible_wall_distances = [point[Block.DISTANCE_FROM_WALL]]
             for neighbor in self.get_neighbors(point):
-                if neighbor.is_air():
-                    if not neighbor.visited:
-                        new_layer.add(neighbor)
-                    if neighbor.verified:
-                        possible_wall_distances.append(neighbor.distance_from_wall + 1)
+                if self.is_air(neighbor):
+                    if not neighbor[Block.VISITED]:
+                      try:
+                        found = False
+                        for element in new_layer: # hack workaround The truth value of an array with more than one element is ambiguous.
+                            if (element == neighbor).all():
+                                found = True
+                        if not found:
+                            new_layer.append(neighbor)
+                      except Exception, e:
+                        import traceback
+                        traceback.print_exc(e)
+                        print neighbor
+                        print new_layer
+                        raw_input()
+                    if neighbor[Block.VERIFIED]:
+                        possible_wall_distances.append(neighbor[Block.DISTANCE_FROM_WALL] + 1)
                 else: # neighbor is wall
                     possible_wall_distances.append(1)
                     
-            point.distance_from_wall = min(possible_wall_distances)
-            if point.distance_from_wall == 1:
+            point[Block.DISTANCE_FROM_WALL] = min(possible_wall_distances)
+            if point[Block.DISTANCE_FROM_WALL] == 1:
                 near_walls.append(point)
 
         for point in layer: # distance was updated, point is not in the front line
-            point.verified = True
+            point[Block.VERIFIED] = True
         '''
         print 'updated distances'
         print layer    
@@ -163,19 +196,24 @@ class FloodFill:
         '''
         print 'new distances'
         print layer
+        
+        print new_layer
         raw_input()
         '''
+        
         return new_layer
     
     def flood_fill(self, layer=None):
         if layer is None:
             layer = self.get_starting_layer()
+        start = time.time()
         i = 0
         while layer:
             i += 1
             self.generation = i
             layer = self.expand(layer)
             self.mark_generation(layer, i)   
+        tacho('Processed {0} layers in {1}s, {2}s per layer', i, start)
 
     def mark_generation(self, layer, generation_number):
         print 'generation {0}, points on the edge: {1}'.format(generation_number, len(layer))
@@ -195,42 +233,60 @@ class MCFloodFill(FloodFill):
     NEIGHBORS = ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1))
     def __init__(self, world):
         self.world = world
-        self.points = {}
+        self.chunks = {}
         self.chunk_coords = set(world.allChunks) # Chunks should never be added/removed, so this is allowed
         
     def get_starting_layer(self):
         layer = []
-        for cx, cy in self.world.allChunks:
+        for cx, cy in [(0, 0), (0, -1), (-1, 0), (-1, -1)]:
+        #for cx, cy in self.world.allChunks:
             base_x = cx * self.CHUNK_SIZE
             base_y = cy * self.CHUNK_SIZE
             for x in range(base_x, base_x + self.CHUNK_SIZE):
                 for y in range(base_y, base_y + self.CHUNK_SIZE):
                     point = self.get_point((x, y, self.CHUNK_HEIGHT - 1))
-                    if point.is_air():
+                    if self.is_air(point):
                         layer.append(point)
         return layer
     
     def get_point(self, position):
-        if position not in self.points:
-            x, y, z = position
-            cx, cy = x / self.CHUNK_SIZE, y / self.CHUNK_SIZE
-            chunk = self.world.getChunk(cx, cy)
-            self.points[position] = Block(chunk, position, chunk.Blocks[x % self.CHUNK_SIZE, y % self.CHUNK_SIZE, z])
-        return self.points[position]
+        x, y, z = position
+        cx, cy = x / self.CHUNK_SIZE, y / self.CHUNK_SIZE
+        chunk = self.world.getChunk(cx, cy)
+        if not (cx, cy) in self.chunks:
+            extended_blocks = numpy.zeros((self.CHUNK_SIZE, self.CHUNK_SIZE, self.CHUNK_HEIGHT), ArrayBlock)
+            self.chunks[cx, cy] = extended_blocks
+            chunk.extended_blocks = extended_blocks
+            blocks = chunk.Blocks
+            offsetx, offsety = cx * self.CHUNK_SIZE, cy * self.CHUNK_SIZE
+            for point_position in itertools.product(range(self.CHUNK_SIZE), range(self.CHUNK_SIZE), range(self.CHUNK_HEIGHT)):
+                block = extended_blocks[point_position]
+                block[Block.VALUE] = blocks[point_position]
+                nx, ny, nz = point_position
+                nx = nx + offsetx
+                ny = ny + offsety
+                block[Block.POSITION][:] = numpy.array((nx, ny, nz))
+                block[Block.DISTANCE_FROM_WALL] = 65536
+        else:
+            extended_blocks = self.chunks[cx, cy]
+        return extended_blocks[x % self.CHUNK_SIZE, y % self.CHUNK_SIZE, z]
 
     def contains(self, position):
         x, y, z = position
         return (x / self.CHUNK_SIZE, y / self.CHUNK_SIZE) in self.chunk_coords and 0 <= z < 128
 
     def get_neighbors(self, point):
-        x, y, z = point.position
+        x, y, z = point[Block.POSITION]
         points = []
         for deltax, deltay, deltaz in self.NEIGHBORS:
             neighbor_position = (x + deltax, y + deltay, z + deltaz)
             if self.contains(neighbor_position):
                 points.append(self.get_point(neighbor_position))
         return points
-        
+    
+    def is_air(self, point):
+        return point[Block.VALUE] in Block.AIR_VALUES
+    
 
 class ImageFloodFill(FloodFill):
     def __init__(self, image):

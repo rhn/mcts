@@ -7,6 +7,10 @@ import flood_fill
 import thinning
 import graph
 
+def tacho_inv(message, total, start):
+    end = time.time()
+    print message.format(total, end - start, int(total / (end - start)))
+
 def copy_data(world, points):
     world2 = world.copy()
     world_data2 = world2.load()
@@ -32,12 +36,14 @@ def save(world):
 
 
 if __name__ == '__main__':
+    import time
     world = mclevel.fromFile(sys.argv[1])
-
+    print 'air blocks:', flood_fill.Block.AIR_VALUES
     flood_filler = flood_fill.MCFloodFill(world)
+    start = time.time()
     layer = flood_filler.get_starting_layer()
+    tacho_inv('Processed {0} blocks in {1}s, {2} per second', len(layer), start)
     print 'layer contains', len(layer), 'blocks'
-    print len([point for point in layer if point.is_air()])
     flood_filler.flood_fill(layer)    
 
     thinner = thinning.MCDistanceThinner(flood_filler.points)
