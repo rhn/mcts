@@ -42,10 +42,15 @@ if __name__ == '__main__':
     flood_filler = flood_fill.MCFloodFill(world)
     start = time.time()
     layer = flood_filler.get_starting_layer()
-    tacho_inv('Processed {0} blocks in {1}s, {2} per second', len(layer), start)
+    tacho_inv('Processed {0} chunks in {1}s, {2} per second', len(flood_filler.chunks), start)
     print 'layer contains', len(layer), 'blocks'
     flood_filler.flood_fill(layer)    
-
+    print 'updating'
+    flood_filler.update_world()
+    print 'saving'
+    save(world)
+    print 'flood filling done'
+    raise NotImplementedError
     thinner = thinning.MCDistanceThinner(flood_filler.points)
     thinner.image = world
     thinner.perform_thinning()

@@ -244,7 +244,7 @@ class MCFloodFill(FloodFill):
         chunk = self.world.getChunk(cx, cy)
         if not (cx, cy) in self.chunks:
             extended_blocks = numpy.zeros((self.CHUNK_SIZE, self.CHUNK_SIZE, self.CHUNK_HEIGHT), ArrayBlock)
-            self.chunks[cx, cy] = extended_blocks
+            self.chunks[cx, cy] = chunk
             chunk.extended_blocks = extended_blocks
             blocks = chunk.Blocks
             offsetx, offsety = cx * self.CHUNK_SIZE, cy * self.CHUNK_SIZE
@@ -255,9 +255,9 @@ class MCFloodFill(FloodFill):
                 nx = nx + offsetx
                 ny = ny + offsety
                 block[Block.POSITION][:] = numpy.array((nx, ny, nz))
-                block[Block.DISTANCE_FROM_WALL] = 65536
+                block[Block.DISTANCE_FROM_WALL] = 65535
         else:
-            extended_blocks = self.chunks[cx, cy]
+            extended_blocks = self.chunks[cx, cy].extended_blocks
         return extended_blocks[x % self.CHUNK_SIZE, y % self.CHUNK_SIZE, z]
 
     def contains(self, position):
@@ -275,6 +275,18 @@ class MCFloodFill(FloodFill):
     
     def is_air(self, point):
         return point[Block.VALUE] in Block.AIR_VALUES
+
+    def update_world(self):
+        material_ids = (mclevel.materials.WoodPlanks.ID, mclevel.materials.Wood.ID, mclevel.materials.Sandstone.ID)
+        for (cx, cy), chunk in self.chunks.items():
+            extended_blocks = chunk.extended_blocks
+            blocks = chunk.Blocks
+            for block in extended_blocks.flat:
+                if self.is_air(block) and block[Block.VISITED]:
+                    distance_from_wall = block[Block.DISTANCE_FROM_WALL]
+                    x, y, z = block[Block.POSITION]
+                    blocks[x % self.CHUNK_SIZE, y % self.CHUNK_SIZE, z] = material_ids[distance_from_wall % 3]
+                    chunk.modified = True
     
 
 class ImageFloodFill(FloodFill):
