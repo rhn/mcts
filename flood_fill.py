@@ -76,9 +76,9 @@ class Block(Point):
     VISITED = 2
     VERIFIED = 3
     DISTANCE_FROM_WALL = 4
-    @staticmethod
-    def is_air(block):
-        return block.value in AIR_VALUES
+    @classmethod
+    def is_air(cls, point):
+        return point[cls.VALUE] in cls.AIR_VALUES
     
     def set_material(self, material):
         x, y, z = self.position
@@ -86,8 +86,10 @@ class Block(Point):
         self.world_data.Blocks[x%16, y%16, z] = self.value
         self.world_data.modified = True
     
-    def mark_final(self):
-        self.set_material(mclevel.materials.Brick)
+    @classmethod
+    def mark_final(cls, block):
+        block[cls.VISITED] = True
+        block[cls.VALUE] = mclevel.materials.Brick.ID
 
     def mark_maximum(self):
         self.set_material(mclevel.materials.LapisLazuliBlock)
@@ -99,8 +101,10 @@ class Block(Point):
     def mark_generation_number(self, generation):
         self.set_material([mclevel.materials.WoodPlanks, mclevel.materials.Wood, mclevel.materials.Sandstone][generation % 3])
     
-    def mark_removed(self):
-        self.set_material(mclevel.materials.Glass)
+    @classmethod
+    def mark_removed(cls, block):
+        block[cls.VISITED] = True
+        block[cls.VALUE] = mclevel.materials.Glass.ID
 
 
 ArrayBlock = numpy.dtype([('position', (numpy.int, 3)), # position
@@ -126,7 +130,7 @@ class FloodFill:
                 raise Exception('point borked')
 #            print point, self.get_neighbors(point)
             for neighbor in self.get_neighbors(point):
-                if self.is_air(neighbor) and neighbor[Block.VISITED] and neighbor[Block.DISTANCE_FROM_WALL] > point[Block.DISTANCE_FROM_WALL] + 1:
+                if Block.is_air(neighbor) and neighbor[Block.VISITED] and neighbor[Block.DISTANCE_FROM_WALL] > point[Block.DISTANCE_FROM_WALL] + 1:
                     neighbor[Block.DISTANCE_FROM_WALL] = point[Block.DISTANCE_FROM_WALL] + 1
                     new_layer.add(neighbor)
         return new_layer
@@ -158,7 +162,7 @@ class FloodFill:
         for point in layer:
             possible_wall_distances = [point[Block.DISTANCE_FROM_WALL]]
             for neighbor in self.get_neighbors(point):
-                if self.is_air(neighbor):
+                if Block.is_air(neighbor):
                     if not neighbor[Block.VISITED]:
                         position = tuple(neighbor[Block.POSITION])
                         new_layer[position] = neighbor
@@ -234,7 +238,7 @@ class MCFloodFill(FloodFill):
             for x in range(base_x, base_x + self.CHUNK_SIZE):
                 for y in range(base_y, base_y + self.CHUNK_SIZE):
                     point = self.get_point((x, y, self.CHUNK_HEIGHT - 1))
-                    if self.is_air(point):
+                    if Block.is_air(point):
                         layer.append(point)
         return layer
     
@@ -272,20 +276,15 @@ class MCFloodFill(FloodFill):
             if self.contains(neighbor_position):
                 points.append(self.get_point(neighbor_position))
         return points
-    
-    def is_air(self, point):
-        return point[Block.VALUE] in Block.AIR_VALUES
 
     def update_world(self):
-        material_ids = (mclevel.materials.WoodPlanks.ID, mclevel.materials.Wood.ID, mclevel.materials.Sandstone.ID)
         for (cx, cy), chunk in self.chunks.items():
             extended_blocks = chunk.extended_blocks
             blocks = chunk.Blocks
             for block in extended_blocks.flat:
-                if self.is_air(block) and block[Block.VISITED]:
-                    distance_from_wall = block[Block.DISTANCE_FROM_WALL]
+                if block[Block.VISITED]:
                     x, y, z = block[Block.POSITION]
-                    blocks[x % self.CHUNK_SIZE, y % self.CHUNK_SIZE, z] = material_ids[distance_from_wall % 3]
+                    blocks[x % self.CHUNK_SIZE, y % self.CHUNK_SIZE, z] = block[Block.VALUE]
                     chunk.modified = True
     
 

@@ -26,14 +26,12 @@ def save(world):
     print 'changing'
     for chunk in (world.getChunk(cx, cy) for cx, cy in world.allChunks):
         if hasattr(chunk, 'modified') and chunk.modified == True:
+            print chunk
             chunk.chunkChanged()
     print 'lighting'
     world.generateLights()
     print 'saving'
     world.saveInPlace()
-    print 'duping'
-    raise NotImplementedError
-
 
 if __name__ == '__main__':
     import time
@@ -45,17 +43,15 @@ if __name__ == '__main__':
     tacho_inv('Processed {0} chunks in {1}s, {2} per second', len(flood_filler.chunks), start)
     print 'layer contains', len(layer), 'blocks'
     flood_filler.flood_fill(layer)    
+    print 'flood filling done'
+    thinner = thinning.MCDistanceThinner(flood_filler.chunks)
+    thinner.image = world
+    thinner.perform_thinning()
     print 'updating'
     flood_filler.update_world()
     print 'saving'
     save(world)
-    print 'flood filling done'
     raise NotImplementedError
-    thinner = thinning.MCDistanceThinner(flood_filler.points)
-    thinner.image = world
-    thinner.perform_thinning()
-    save(world)
-    
     while True:
         try:
             reload(graph.backend)
