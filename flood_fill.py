@@ -4,8 +4,6 @@ import numpy
 import itertools
 from common import *
 
-debug = True
-
 def dilate(layer, get_neighbors):
     new_layer = {}
     for point in layer:
@@ -175,6 +173,7 @@ class MCFloodFill(FloodFill):
                             break
                 else:
                     point[Block.VISITED] = True
+                    point[Block.DISTANCE_FROM_WALL] = 0
                 
         return layer
     
