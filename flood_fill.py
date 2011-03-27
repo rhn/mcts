@@ -228,12 +228,13 @@ class FloodFill:
         print 'dilating'        
         def get_neighbors(point):
             return (neighbor for neighbor in self.get_neighbors(point) if not neighbor[Block.VISITED])
+            
         start = time.time()
         points = len(layer)
+        
         distance = 1
         while layer:
             self.mark_generation(layer, distance)  
-            self.generation = distance
             for point in layer:
                 point[Block.VISITED] = True
 
@@ -241,7 +242,9 @@ class FloodFill:
             for point in layer:
                 point[Block.DISTANCE_FROM_WALL] = distance
             distance += 1
+            
             points += len(layer)
+            
         tacho('Processed {0} layers in {1}s, {2}s per layer', distance, start)
         tacho_inv('{0} points in {1}s, {2} points per second', points, start)
 
@@ -280,26 +283,44 @@ class MCFloodFill(FloodFill):
                         layer.append(point)
         return layer
     
+    def get_air_neighboring_walls(self):
+        layer = []
+        #for cx, cy in [(0, 0), (0, -1), (-1, 0), (-1, -1)]:
+        for chunk_position in self.world.allChunks:
+            if not chunk_position in self.chunks:
+                self._load_chunk(chunk_position)
+            extended_blocks = self.chunks[cx, cy].extended_blocks
+            for point in extended_blocks.flat:
+                if point[Block.VALUE] in Block.AIR_VALUES:
+                    for neighbor in self.get_neighbors(point):
+                        if neighbor[Block.VALUE] not in Block.AIR_VALUES:
+                            layer.append(point)
+                            break
+                
+        return layer
+    
+    def _load_chunk(self, cx, cy):
+        extended_blocks = numpy.zeros((self.CHUNK_SIZE, self.CHUNK_SIZE, self.CHUNK_HEIGHT), ArrayBlock)
+        self.chunks[cx, cy] = chunk
+        chunk.extended_blocks = extended_blocks
+        blocks = chunk.Blocks
+        offsetx, offsety = cx * self.CHUNK_SIZE, cy * self.CHUNK_SIZE
+        for point_position in itertools.product(range(self.CHUNK_SIZE), range(self.CHUNK_SIZE), range(self.CHUNK_HEIGHT)):
+            block = extended_blocks[point_position]
+            block[Block.VALUE] = blocks[point_position]
+            x, y, z = point_position
+            x = x + offsetx
+            y = y + offsety
+            block[Block.POSITION][:] = numpy.array((x, y, z))
+            block[Block.DISTANCE_FROM_WALL] = 65535
+    
     def get_point(self, position):
         x, y, z = position
         cx, cy = x / self.CHUNK_SIZE, y / self.CHUNK_SIZE
         chunk = self.world.getChunk(cx, cy)
         if not (cx, cy) in self.chunks:
-            extended_blocks = numpy.zeros((self.CHUNK_SIZE, self.CHUNK_SIZE, self.CHUNK_HEIGHT), ArrayBlock)
-            self.chunks[cx, cy] = chunk
-            chunk.extended_blocks = extended_blocks
-            blocks = chunk.Blocks
-            offsetx, offsety = cx * self.CHUNK_SIZE, cy * self.CHUNK_SIZE
-            for point_position in itertools.product(range(self.CHUNK_SIZE), range(self.CHUNK_SIZE), range(self.CHUNK_HEIGHT)):
-                block = extended_blocks[point_position]
-                block[Block.VALUE] = blocks[point_position]
-                nx, ny, nz = point_position
-                nx = nx + offsetx
-                ny = ny + offsety
-                block[Block.POSITION][:] = numpy.array((nx, ny, nz))
-                block[Block.DISTANCE_FROM_WALL] = 65535
-        else:
-            extended_blocks = self.chunks[cx, cy].extended_blocks
+            self._load_chunk(cx, cy)
+        extended_blocks = self.chunks[cx, cy].extended_blocks
         return extended_blocks[x % self.CHUNK_SIZE, y % self.CHUNK_SIZE, z]
 
     def contains(self, position):
