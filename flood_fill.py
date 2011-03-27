@@ -3,6 +3,7 @@ from pymclevel import mclevel
 import numpy
 import itertools
 from common import *
+import thinning
 
 def dilate(layer, get_neighbors):
     new_layer = {}
@@ -95,6 +96,8 @@ class FloodFill:
     def dilate(self):
         layer = self.get_air_neighboring_walls()
         
+        thinner = self.build_thinner()
+        
         print 'dilating'        
         def get_neighbors(point):
             return (neighbor for neighbor in self.get_neighbors(point) if not neighbor[Block.VISITED])
@@ -104,7 +107,7 @@ class FloodFill:
         
         distance = 1
         while layer:
-            self.mark_generation(layer, distance)  
+            thinner.thin_layer(layer)
             for point in layer:
                 point[Block.VISITED] = True
 
@@ -224,6 +227,8 @@ class MCFloodFill(FloodFill):
                     blocks[x % self.CHUNK_SIZE, y % self.CHUNK_SIZE, z] = block[Block.VALUE]
                     chunk.modified = True
     
+    def build_thinner(self):
+        return thinning.MCDistanceThinner(self.chunks)
 
 class ImageFloodFill(FloodFill):
     def __init__(self, image):

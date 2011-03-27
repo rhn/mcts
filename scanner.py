@@ -42,12 +42,12 @@ if __name__ == '__main__':
         common.tacho('Processed {0} chunks in {1}s, {2}s per chunk', len(flood_filler.chunks), start)
         print 'layer contains', len(layer), 'blocks'
         flood_filler.flood_fill(layer)
+        print 'flood filling done'
+        thinner = thinning.MCDistanceThinner(flood_filler.chunks)
+        thinner.image = world
+        thinner.perform_thinning()
     else:
         flood_filler.dilate()
-    print 'flood filling done'
-    thinner = thinning.MCDistanceThinner(flood_filler.chunks)
-    thinner.image = world
-    thinner.perform_thinning()
     print 'updating'
     flood_filler.update_world()
     print 'saving'
