@@ -1,9 +1,8 @@
 import time
-from pymclevel import mclevel
-import numpy
 import itertools
 from common import *
 import thinning
+
 
 def dilate(layer, get_neighbors):
     new_layer = {}

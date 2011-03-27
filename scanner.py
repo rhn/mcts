@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
-from pymclevel import mclevel
 import sys
+from pymclevel import mclevel
 
 import flood_fill
 import thinning
@@ -33,7 +33,7 @@ def save(world):
 if __name__ == '__main__':
     import time
     world = mclevel.fromFile(sys.argv[-1])
-    print 'air blocks:', flood_fill.Block.AIR_VALUES
+    print 'air blocks:', common.Block.AIR_VALUES
     flood_filler = flood_fill.MCFloodFill(world)
 
     if len(sys.argv) > 2: # old engine

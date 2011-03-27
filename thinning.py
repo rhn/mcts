@@ -68,6 +68,7 @@ class DistanceThinner:
 class ProgressiveDistanceThinner(DistanceThinner):
     def __init__(self, points):
         self.points = points
+        DistanceThinner.__init__(self)
     
     def get_sorted_points(self): # can be optimized
         distances = {}
@@ -184,7 +185,7 @@ class MCDistanceThinner(DistanceThinner):
     def __init__(self, chunks):
         """chunks is {(cx, cy): chunk}"""
         self.chunks = chunks
-        DistanceThinner.__init__(self, points)
+        DistanceThinner.__init__(self)
     
     def get_points(self, positions):
         points = []
@@ -203,7 +204,7 @@ class MCDistanceThinner(DistanceThinner):
         neighbors = []
         for deltax, deltay, deltaz in self.NEIGHBORS:
             neighbor_position = (x + deltax, y + deltay, z + deltaz)
-            if self.contains(neighbor_position)
+            if self.contains(neighbor_position):
                 neighbors.append(self.get_point(neighbor_position))
         return neighbors
     
@@ -212,7 +213,7 @@ class MCDistanceThinner(DistanceThinner):
     
     def contains(self, position):
         x, y, z = position
-        if (x / self.CHUNK_SIZE, y / self.CHUNK_SIZE) in self.chunks and 0 <= z < 128
+        if (x / self.CHUNK_SIZE, y / self.CHUNK_SIZE) in self.chunks and 0 <= z < 128:
             point = self.get_point(position)
             if not point[Block.VERIFIED] and not point[Block.DISTANCE_FROM_WALL] == 0: # not already removed nor wall
                 return True
