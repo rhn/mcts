@@ -99,7 +99,6 @@ class Block(Point):
         block[cls.VISITED] = True
         block[cls.VALUE] = mclevel.materials.Brick.ID
 
-
     @classmethod
     def mark_maximum(cls, block):
         block[cls.VISITED] = True
@@ -114,14 +113,15 @@ class Block(Point):
     
     @classmethod
     def mark_removed(cls, block):
-        block[cls.VISITED] = True
-        block[cls.VALUE] = mclevel.materials.Glass.ID
+        pass
 
     if debug:
         @classmethod
         def mark_removed(cls, block):
-            pass
-            
+            block[cls.VISITED] = True
+            block[cls.VALUE] = mclevel.materials.Glass.ID
+
+
 ArrayBlock = numpy.dtype([('position', (numpy.int, 3)), # position
                           ('value', numpy.int), # value
                           ('visited', numpy.bool), # visited

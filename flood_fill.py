@@ -107,6 +107,7 @@ class FloodFill:
         distance = 1
         while layer:
             thinner.thin_layer(layer)
+            self.mark_generation(layer, distance)
             for point in layer:
                 point[Block.VISITED] = True
 
@@ -119,6 +120,9 @@ class FloodFill:
             
         tacho('Processed {0} layers in {1}s, {2}s per layer', distance, start)
         tacho_inv('{0} points in {1}s, {2} points per second', points, start)
+     
+        print 'Thinning finished with {0} points left.'.format(len(thinner.unremoved) + len(thinner.peaks))
+        return thinner
 
 
     def mark_generation(self, layer, generation_number):
@@ -176,7 +180,6 @@ class MCFloodFill(FloodFill):
                 else:
                     point[Block.VISITED] = True
                     point[Block.DISTANCE_FROM_WALL] = 0
-                
         return layer
     
     def _load_chunk(self, cx, cy):

@@ -47,7 +47,7 @@ if __name__ == '__main__':
         thinner.image = world
         thinner.perform_thinning()
     else:
-        flood_filler.dilate()
+        thinner = flood_filler.dilate()
     print 'updating'
     flood_filler.update_world()
     print 'saving'

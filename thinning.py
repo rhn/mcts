@@ -61,8 +61,9 @@ class DistanceThinner:
             points = new_points
             #print '\t\t{0}: removed {1}'.format(i, iterdel)
         unremoved = set(self.get_positions(points))
-        if distance < 10:            
-            print '\tRemoved {0} points in {1} iterations, left {2}'.format(deleted, i, len(unremoved))
+        self.unremoved = unremoved
+        self.peaks = peaks
+        print '\tRemoved {0} points in {1} iterations, left {2}'.format(deleted, i, len(unremoved))
     
 
 class ProgressiveDistanceThinner(DistanceThinner):
@@ -208,7 +209,7 @@ class MCDistanceThinner(DistanceThinner):
                 neighbors.append(self.get_point(neighbor_position))
         return neighbors
     
-    def remove(self, point):
+    def remove_point(self, point):
         point[Block.VERIFIED] = True
     
     def contains(self, position):
