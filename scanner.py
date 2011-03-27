@@ -6,10 +6,7 @@ import sys
 import flood_fill
 import thinning
 import graph
-
-def tacho_inv(message, total, start):
-    end = time.time()
-    print message.format(total, end - start, int(total / (end - start)))
+import common
 
 def copy_data(world, points):
     world2 = world.copy()
@@ -35,14 +32,18 @@ def save(world):
 
 if __name__ == '__main__':
     import time
-    world = mclevel.fromFile(sys.argv[1])
+    world = mclevel.fromFile(sys.argv[-1])
     print 'air blocks:', flood_fill.Block.AIR_VALUES
     flood_filler = flood_fill.MCFloodFill(world)
-    start = time.time()
-    layer = flood_filler.get_starting_layer()
-    tacho('Processed {0} chunks in {1}s, {2}s per chunk', len(flood_filler.chunks), start)
-    print 'layer contains', len(layer), 'blocks'
-    flood_filler.flood_fill(layer)    
+
+    if len(sys.argv) > 2: # old engine
+        start = time.time()
+        layer = flood_filler.get_starting_layer()
+        common.tacho('Processed {0} chunks in {1}s, {2}s per chunk', len(flood_filler.chunks), start)
+        print 'layer contains', len(layer), 'blocks'
+        flood_filler.flood_fill(layer)
+    else:
+        flood_filler.dilate()
     print 'flood filling done'
     thinner = thinning.MCDistanceThinner(flood_filler.chunks)
     thinner.image = world

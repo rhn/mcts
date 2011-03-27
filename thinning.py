@@ -1,5 +1,4 @@
-from flood_fill import Point, Block
-
+from common import Block
 
 
 class DistanceThinner:
@@ -85,7 +84,7 @@ class DistanceThinner:
                         Block.mark_maximum(point)
                     elif self.is_expendable(point, neighbors):
                         del self.points[tuple(point[Block.POSITION])] # deletion must be immediate. otherwise two neighboring maxima would both either stay or erase
-                        #Block.mark_removed(point)
+                        Block.mark_removed(point)
                         modified = True
                         deleted += 1
                  #       iterdel += 1
