@@ -69,8 +69,8 @@ class Pixel(Point):
 
 class Block(Point):
     # XXX: values sould be normal
-#    AIR_VALUES = [mclevel.materials.Air.ID]
-    AIR_VALUES = [mclevel.materials.Cobblestone.ID] + [mclevel.materials.WoodPlanks.ID, mclevel.materials.Wood.ID, mclevel.materials.Sandstone.ID]
+    AIR_VALUES = [mclevel.materials.Air.ID]
+#    AIR_VALUES = [mclevel.materials.Cobblestone.ID] + [mclevel.materials.WoodPlanks.ID, mclevel.materials.Wood.ID, mclevel.materials.Sandstone.ID]
     VALUE = 1
     POSITION = 0
     VISITED = 2
@@ -91,8 +91,11 @@ class Block(Point):
         block[cls.VISITED] = True
         block[cls.VALUE] = mclevel.materials.Brick.ID
 
-    def mark_maximum(self):
-        self.set_material(mclevel.materials.LapisLazuliBlock)
+
+    @classmethod
+    def mark_maximum(cls, block):
+        block[cls.VISITED] = True
+        block[cls.VALUE] = mclevel.materials.Brick.ID
 
     def mark_distance_from_wall(self):
         return
@@ -144,9 +147,11 @@ class FloodFill:
             distance += 1
             layer = self.expand_distances(layer)
             c += len(layer)
+            if c > 0 and distance > 1:
+                print '\tprocessing {0} points'.format(start)
             self.mark_distance_from_wall(layer) # TODO: slows down everything, called many times for the same pixels
         if c > 0:
-            print '\tbefore distance {0}, points processed: {1} updated: {2}'.format(distance, start, c)
+            print '\tbefore distance {0} updated: {1} points'.format(distance, c)
            # raw_input()
 
     def expand(self, layer):
@@ -231,8 +236,8 @@ class MCFloodFill(FloodFill):
         
     def get_starting_layer(self):
         layer = []
-        for cx, cy in [(0, 0), (0, -1), (-1, 0), (-1, -1)]:
-        #for cx, cy in self.world.allChunks:
+        #for cx, cy in [(0, 0), (0, -1), (-1, 0), (-1, -1)]:
+        for cx, cy in self.world.allChunks:
             base_x = cx * self.CHUNK_SIZE
             base_y = cy * self.CHUNK_SIZE
             for x in range(base_x, base_x + self.CHUNK_SIZE):

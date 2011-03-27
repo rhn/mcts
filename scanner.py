@@ -40,7 +40,7 @@ if __name__ == '__main__':
     flood_filler = flood_fill.MCFloodFill(world)
     start = time.time()
     layer = flood_filler.get_starting_layer()
-    tacho_inv('Processed {0} chunks in {1}s, {2} per second', len(flood_filler.chunks), start)
+    tacho('Processed {0} chunks in {1}s, {2}s per chunk', len(flood_filler.chunks), start)
     print 'layer contains', len(layer), 'blocks'
     flood_filler.flood_fill(layer)    
     print 'flood filling done'
