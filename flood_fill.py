@@ -8,6 +8,14 @@ def tacho(message, total, start):
     print message.format(total, end - start, int((end - start) / total))
 
 
+def dilate(layer, get_neighbors):
+    new_layer = {}
+    for point in layer:
+        for neighbor in get_neighbors(point):
+            new_layer[tuple(neighbor[Block.POSITION])] = neighbor
+    return new_layer.values()
+    
+
 class Point:
     def __init__(self, world, position, value):
         self.world_data = world
@@ -213,6 +221,31 @@ class FloodFill:
             self.mark_generation(layer, i)   
         tacho('Processed {0} layers in {1}s, {2}s per layer', i, start)
 
+
+    def dilate(self):
+        layer = self.get_air_neighboring_walls(self)
+        
+        print 'dilating'        
+        def get_neighbors(point):
+            return (neighbor for neighbor in self.get_neighbors(point) if not neighbor[Block.VISITED])
+        start = time.time()
+        points = len(layer)
+        distance = 1
+        while layer:
+            self.mark_generation(layer, distance)  
+            self.generation = distance
+            for point in layer:
+                point[Block.VISITED] = True
+
+            layer = dilate(layer, get_neighbors)
+            for point in layer:
+                point[Block.DISTANCE_FROM_WALL] = distance
+            distance += 1
+            points += len(layer)
+        tacho('Processed {0} layers in {1}s, {2}s per layer', distance, start)
+        tacho_inv('{0} points in {1}s, {2} points per second', points, start)
+
+
     def mark_generation(self, layer, generation_number):
         print 'generation {0}, points on the edge: {1}'.format(generation_number, len(layer))
         return
@@ -301,6 +334,11 @@ class ImageFloodFill(FloodFill):
         self.world_data = image.load()
         self.image = image
         self.points = {}
+    
+    def get_points(self):
+        for x in range(self.minx, self.maxx):
+            for y in range(self.miny, self.maxy):
+                yield self.get_point((x, y))
     
     def get_point(self, position):
         if position not in self.points:

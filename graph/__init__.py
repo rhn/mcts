@@ -1,14 +1,6 @@
 import graph.backend as backend
 
 
-def dilate(layer, get_neighbors):
-    new_layer = set()
-    for point in layer:
-        for neighbor in get_neighbors(point):
-            new_layer.add(neighbor)
-    return new_layer
-
-
 class Tunnel: # could be sort of a partially-mutable object for set lookup. start* and end* are never going to change
     def __init__(self, start, end, start_neighbor, end_neighbor, data=None):
         self.start = start
