@@ -3,7 +3,7 @@ from common import Block, tacho
 
 class DistanceThinner:
     def __init__(self):
-        self.unremoved = set()
+        self.unremoved = []
         self.peaks = []
         
     def is_local_peak(self, point, neighbors):
@@ -33,22 +33,29 @@ class DistanceThinner:
         
         tacho.reset('thinning')
         
-        points = self.get_points(unremoved.union(self.get_positions(layer)))
+        processed_points = unremoved + layer
         
-        total = len(points)
+        total = len(processed_points)
         print '\tThinning - points on the edge {0}, previously untouched {1},\n' \
               '\t\t---- total {2}'.format(len(layer), len(unremoved), total)
-        modified = True
+        modified_neighbors = layer
 
         deleted = 0
         i = 0
 
-        while modified:
+        while modified_neighbors:
             i += 1
             #iterdel = 0
-            modified = False
-            new_points = []
-            for point in points:
+            new_modified_neighbors = []
+            #print len(modified_neighbors), len(set(self.get_positions(modified_neighbors)))
+            for point in modified_neighbors:
+                # if deleted or not flooded or wall
+                if point[Block.VERIFIED] or not point[Block.VISITED] or point[Block.VALUE] not in Block.AIR_VALUES:
+                    #print 'pass', point
+                    continue
+                    '''
+                print point
+'''
                 neighbors = self.get_neighbors(point)
                 
                 if self.is_local_peak(point, neighbors):
@@ -59,12 +66,22 @@ class DistanceThinner:
                     Block.mark_removed(point)
                     modified = True
                     deleted += 1
-             #       iterdel += 1
+                    new_modified_neighbors.extend(neighbors)
+                    '''
+                    print point
+                    print neighbors
+                    print [point for point in neighbors if not point[Block.VERIFIED] and point[Block.VISITED]]
+                    raw_input()'''
                 else: # point is not maximum but had to stay
-                    new_points.append(point)
-            points = new_points
-            #print '\t\t{0}: removed {1}'.format(i, iterdel)
-        unremoved = set(self.get_positions(points))
+                    pass
+                '''
+                print point
+                raw_input()
+                '''
+            modified_neighbors = new_modified_neighbors
+        
+        unremoved = [point for point in processed_points if not point[Block.VERIFIED]]
+        
         self.unremoved = unremoved
         self.peaks = peaks
         

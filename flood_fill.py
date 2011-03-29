@@ -107,13 +107,13 @@ class FloodFill:
             points = len(layer)
         #    self.mark_generation(layer, distance)            
             print 'distance', distance
+
+            for point in layer:
+                point[Block.VISITED] = True
             
             thinner.thin_layer(layer)
 
             tacho.reset('dilating')
-
-            for point in layer:
-                point[Block.VISITED] = True
 
             layer = dilate(layer, get_neighbors)
             for point in layer:
@@ -128,7 +128,7 @@ class FloodFill:
         print 'Thinning finished with {0} points left.'.format(len(thinner.unremoved) + len(thinner.peaks))
         tacho.close('skeletization')
         for position in thinner.unremoved:
-            Block.mark_final(self.get_point(position))
+            Block.mark_final(position)
         return thinner
 
     def mark_generation(self, layer, generation_number):
@@ -165,7 +165,7 @@ class MCFloodFill(FloodFill):
         return layer
     
     def get_air_neighboring_walls(self):
-        chunks = self.world.allChunks
+        chunks = [chunk for chunk in self.world.allChunks]
         if debug.small_area:
             chunks = [(0, 0), (0, -1), (-1, 0), (-1, -1)]
         
