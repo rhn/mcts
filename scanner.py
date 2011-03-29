@@ -37,9 +37,7 @@ if __name__ == '__main__':
     flood_filler = flood_fill.MCFloodFill(world)
 
     if len(sys.argv) > 2: # old engine
-        start = time.time()
         layer = flood_filler.get_starting_layer()
-        common.tacho('Processed {0} chunks in {1}s, {2}s per chunk', len(flood_filler.chunks), start)
         print 'layer contains', len(layer), 'blocks'
         flood_filler.flood_fill(layer)
         print 'flood filling done'

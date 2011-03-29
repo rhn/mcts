@@ -1,4 +1,4 @@
-from common import Block
+from common import Block, tacho
 
 
 class DistanceThinner:
@@ -30,10 +30,14 @@ class DistanceThinner:
     def thin_layer(self, layer):
         peaks = self.peaks
         unremoved = self.unremoved
+        
+        tacho.reset('thinning')
+        
         points = self.get_points(unremoved.union(self.get_positions(layer)))
         
-        print 'points: on the edge {0}, previously untouched {1},\n' \
-              '\t---- total {2}'.format(len(layer), len(unremoved), len(points))
+        total = len(points)
+        print '\tThinning - points on the edge {0}, previously untouched {1},\n' \
+              '\t\t---- total {2}'.format(len(layer), len(unremoved), total)
         modified = True
 
         deleted = 0
@@ -63,7 +67,10 @@ class DistanceThinner:
         unremoved = set(self.get_positions(points))
         self.unremoved = unremoved
         self.peaks = peaks
-        print '\tRemoved {0} points in {1} iterations, left {2}'.format(deleted, i, len(unremoved))
+        
+        tacho.mark('thinning', total)
+        
+        print '\tThinning removed {0} points in {1} iterations, left {2}'.format(deleted, i, len(unremoved))
     
 
 class ProgressiveDistanceThinner(DistanceThinner):

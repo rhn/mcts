@@ -93,21 +93,25 @@ class FloodFill:
 
 
     def dilate(self):
+        tacho.open('skeletization', 'Skeletization completed in {1}s.', 'Skeletization completed in {1}s.')
         layer = self.get_air_neighboring_walls()
-        
+        tacho.open('dilating', 'Dilated {0} points in {1}s, {2}s per point', 'Dilated {0} points in {1}s, {2} points per second')
+        tacho.open('thinning', 'Thinned {0} points in {1}s, {2}s per point', 'Thinned {0} points in {1}s, {2} points per second')
         thinner = self.build_thinner()
         
-        print 'dilating'        
         def get_neighbors(point):
             return (neighbor for neighbor in self.get_neighbors(point) if not neighbor[Block.VISITED])
-            
-        start = time.time()
-        points = len(layer)
         
         distance = 1
         while layer:
+            points = len(layer)
+        #    self.mark_generation(layer, distance)            
+            print 'distance', distance
+            
             thinner.thin_layer(layer)
-            self.mark_generation(layer, distance)
+
+            tacho.reset('dilating')
+
             for point in layer:
                 point[Block.VISITED] = True
 
@@ -116,18 +120,19 @@ class FloodFill:
                 point[Block.DISTANCE_FROM_WALL] = distance
             distance += 1
             
-            points += len(layer)
-            
-        tacho('Processed {0} layers in {1}s, {2}s per layer', distance, start)
-        tacho_inv('{0} points in {1}s, {2} points per second', points, start)
-     
+            tacho.mark('dilating', points)
+        
+        tacho.mark('skeletization', 1, silent=True)
+        tacho.close('dilating')
+        tacho.close('thinning')
         print 'Thinning finished with {0} points left.'.format(len(thinner.unremoved) + len(thinner.peaks))
+        tacho.close('skeletization')
+        for position in thinner.unremoved:
+            Block.mark_final(self.get_point(position))
         return thinner
-
 
     def mark_generation(self, layer, generation_number):
         print 'generation {0}, points on the edge: {1}'.format(generation_number, len(layer))
-        return
         for point in layer:
             point.mark_generation_number(generation_number)
 
@@ -140,12 +145,12 @@ class MCFloodFill(FloodFill):
         self.world = world
         self.chunks = {}
         self.chunk_coords = set(world.allChunks) # Chunks should never be added/removed, so this is allowed 
-        if debug:
+        if debug.small_area:
             self.chunk_coords = [(0, 0), (0, -1), (-1, 0), (-1, -1)]
         
     def get_starting_layer(self):
         chunks = self.world.allChunks
-        if debug:
+        if debug.small_area:
             chunks = [(0, 0), (0, -1), (-1, 0), (-1, -1)]
     
         layer = []
@@ -161,14 +166,16 @@ class MCFloodFill(FloodFill):
     
     def get_air_neighboring_walls(self):
         chunks = self.world.allChunks
-        if debug:
+        if debug.small_area:
             chunks = [(0, 0), (0, -1), (-1, 0), (-1, -1)]
         
         layer = []
-        for cx, cy in chunks:
-            print 'chunk', (cx, cy)
+        
+        print 'loading', len(chunks), 'chunks'
+        tacho.open('loading', 'Loaded {0} chunks in {1}s, {2}s per chunk', 'Loaded {0} chunks in {1}s, {2} chunks per second')
+        
+        for i, (cx, cy) in enumerate(chunks):
             if not (cx, cy) in self.chunks:
-                print 'loading'
                 self._load_chunk(cx, cy)
             extended_blocks = self.chunks[cx, cy].extended_blocks
             for point in extended_blocks.flat:
@@ -180,6 +187,8 @@ class MCFloodFill(FloodFill):
                 else:
                     point[Block.VISITED] = True
                     point[Block.DISTANCE_FROM_WALL] = 0
+            tacho.mark('loading', 1)
+        tacho.close('loading')
         return layer
     
     def _load_chunk(self, cx, cy):

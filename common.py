@@ -3,15 +3,78 @@ import time
 from pymclevel import mclevel
 import numpy
 
-debug = True
 
-def tacho(message, total, start):
-    end = time.time()
-    print message.format(total, end - start, int((end - start) / total))
+class debug:
+    small_area = True
+    inverted_air = False
 
-def tacho_inv(message, total, start):
-    end = time.time()
-    print message.format(total, end - start, int(total / (end - start)))
+if debug.small_area:
+    print 'Restricted area'
+
+if debug.inverted_air:
+    print 'Anti-air'
+
+
+class Topic:
+    def __init__(self):
+        self.last_start = None
+        self.last_result = None
+        self.time_spent = None
+        self.processed = 0
+        self.normal_message = None
+        self.inv_message = None
+
+    def reset(self):
+        self.last_start = time.time()
+
+    def mark(self, processed):
+        self.processed = self.processed + processed
+        self.last_result = time.time()
+        time_spent = self.last_result - self.last_start
+        self.time_spent = self.time_spent + time_spent
+        self.reset()
+        return time_spent
+    
+    def print_message(self, processed, time_spent, total=False):
+        time_per_object = int((time_spent) / processed)
+        if time_per_object == 0:
+            objects_per_second = int((processed) / time_spent)
+            message = self.inv_message.format(processed, time_spent, objects_per_second)
+        else:
+            message = self.normal_message.format(processed, time_spent, time_per_object)
+        if not total:
+            message = '\t' + message
+        print message
+
+class TimingOutputter:
+    def __init__(self):
+        self.topics = {}
+        
+    def open(self, topic_name, normal_message, inv_message):
+        topic = Topic()
+        topic.time_spent = 0
+        topic.normal_message = normal_message
+        topic.inv_message = inv_message
+        self.topics[topic_name] = topic
+        self.reset(topic_name)
+    
+    def mark(self, topic_name, processed, silent=False):
+        topic = self.topics[topic_name]
+        time_spent = topic.mark(processed)
+        if not silent:
+            topic.print_message(processed, time_spent)
+    
+    def reset(self, topic_name):
+        self.topics[topic_name].reset()
+        
+    def close(self, topic_name):
+        topic = self.topics[topic_name]
+        time_spent = topic.time_spent
+        del self.topics[topic_name]
+        topic.print_message(topic.processed, time_spent, total=True)
+
+
+tacho = TimingOutputter()
     
     
 class Point:
@@ -77,7 +140,7 @@ class Pixel(Point):
 class Block(Point):
     # XXX: values sould be normal
     AIR_VALUES = [mclevel.materials.Air.ID]
-    if debug:
+    if debug.inverted_air:
         AIR_VALUES = [mclevel.materials.Cobblestone.ID] + [mclevel.materials.WoodPlanks.ID, mclevel.materials.Wood.ID, mclevel.materials.Sandstone.ID]
     VALUE = 1
     POSITION = 0
@@ -102,7 +165,7 @@ class Block(Point):
     @classmethod
     def mark_maximum(cls, block):
         block[cls.VISITED] = True
-        block[cls.VALUE] = mclevel.materials.Brick.ID
+        block[cls.VALUE] = mclevel.materials.LapisLazuliBlock.ID
 
     def mark_distance_from_wall(self):
         return
@@ -115,7 +178,7 @@ class Block(Point):
     def mark_removed(cls, block):
         pass
 
-    if debug:
+    if debug.inverted_air:
         @classmethod
         def mark_removed(cls, block):
             block[cls.VISITED] = True
