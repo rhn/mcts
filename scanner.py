@@ -45,7 +45,10 @@ if __name__ == '__main__':
         thinner.image = world
         thinner.perform_thinning()
     else:
-        thinner = flood_filler.dilate()
+        try:
+            thinner = flood_filler.dilate()
+        except common.PleaseSave:
+            print 'save requested'
     print 'updating'
     flood_filler.update_world()
     print 'saving'

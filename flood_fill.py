@@ -125,10 +125,17 @@ class FloodFill:
         tacho.mark('skeletization', 1, silent=True)
         tacho.close('dilating')
         tacho.close('thinning')
-        print 'Thinning finished with {0} points left.'.format(len(thinner.unremoved) + len(thinner.peaks))
+        
+        for point in thinner.unremoved:
+            Block.mark_final(point)
+        
+        for point in thinner.peaks:
+            Block.mark_maximum(point)
+        
+        
+        print 'Thinning finished with {0} points left.'.format(len(thinner.unremoved))
         tacho.close('skeletization')
-        for position in thinner.unremoved:
-            Block.mark_final(position)
+
         return thinner
 
     def mark_generation(self, layer, generation_number):
@@ -210,16 +217,19 @@ class MCFloodFill(FloodFill):
     def get_point(self, position):
         x, y, z = position
         cx, cy = x / self.CHUNK_SIZE, y / self.CHUNK_SIZE
-        if not (cx, cy) in self.chunks:
+        try:
+            chunk = self.chunks[cx, cy]
+        except KeyError:
             self._load_chunk(cx, cy)
-        extended_blocks = self.chunks[cx, cy].extended_blocks
+            chunk = self.chunks[cx, cy]
+        extended_blocks = chunk.extended_blocks
         return extended_blocks[x % self.CHUNK_SIZE, y % self.CHUNK_SIZE, z]
 
     def contains(self, position):
         x, y, z = position
         return (x / self.CHUNK_SIZE, y / self.CHUNK_SIZE) in self.chunk_coords and 0 <= z < 128
 
-    def get_neighbors(self, point):
+    def get_neighbors(self, point): # make use of chunks if point not on chunk edge
         x, y, z = point[Block.POSITION]
         points = []
         for deltax, deltay, deltaz in self.NEIGHBORS:

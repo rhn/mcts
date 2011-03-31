@@ -4,6 +4,10 @@ from pymclevel import mclevel
 import numpy
 
 
+class PleaseSave(Exception):
+    pass
+    
+
 class debug:
     small_area = True
     inverted_air = False
@@ -138,10 +142,9 @@ class Pixel(Point):
 
 
 class Block(Point):
-    # XXX: values sould be normal
-    AIR_VALUES = [mclevel.materials.Air.ID]
+    AIR_VALUES = (mclevel.materials.Air.ID, mclevel.materials.Torch.ID)
     if debug.inverted_air:
-        AIR_VALUES = [mclevel.materials.Cobblestone.ID] + [mclevel.materials.WoodPlanks.ID, mclevel.materials.Wood.ID, mclevel.materials.Sandstone.ID]
+        AIR_VALUES = (mclevel.materials.Cobblestone.ID, mclevel.materials.WoodPlanks.ID, mclevel.materials.Wood.ID, mclevel.materials.Sandstone.ID)
     VALUE = 1
     POSITION = 0
     VISITED = 2

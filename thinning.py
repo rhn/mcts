@@ -79,6 +79,14 @@ class DistanceThinner:
                 raw_input()
                 '''
             modified_neighbors = new_modified_neighbors
+        '''
+        for point in processed_points:
+            if not point[Block.VERIFIED]:
+                neighbors = self.get_neighbors(point)
+                if not self.is_local_peak(point, neighbors):
+                    if self.is_expendable(point, neighbors):
+                        raise Exception("fail")
+           '''     
         
         unremoved = [point for point in processed_points if not point[Block.VERIFIED]]
         
