@@ -1,5 +1,6 @@
 import graph.backend as backend
-
+import common
+import pymclevel as mclevel
 
 class Tunnel: # could be sort of a partially-mutable object for set lookup. start* and end* are never going to change
     def __init__(self, start, end, start_neighbor, end_neighbor, data=None):
@@ -46,6 +47,7 @@ class TunnelEdge(backend.Edge):
 
 
 class Clump:
+    NAME = 'N'
     def __init__(self, points):
         self.points = points
         self._root_diagram_node = None
@@ -68,23 +70,26 @@ class Clump:
         return size / len(self.points)
     
     def get_avg_position(self):
-        x, y = 0, 0
+        x, y, z = 0, 0, 0
         for point in self.points:
             x += point.position[0]
             y += point.position[1]
-        return (x / len(self.points), y / len(self.points))
+            z += point.position[2]
+        return (x / len(self.points), y / len(self.points), z / len(self.points))
 
     def __repr__(self):
-        return 'N({0}: {1}, {2})'.format(len(self.points), self.get_avg_position(), self.get_avg_size())
+        return self.NAME + '({0}x {1}, {2})'.format(len(self.points), self.get_avg_position(), self.get_avg_size())
 
 
 class DeadEnd(Clump):
+    NAME = 'D'
     def _create_diagram_representation(self):
         self._root_diagram_node = backend.EndingNode(self)
         self._diagram_representation = [self._root_diagram_node], []
         
         
 class Cave(Clump):
+    NAME = 'C'
     def _create_diagram_representation(self):
         self._root_diagram_node = backend.JunctionNode(self)
         self._diagram_representation = [self._root_diagram_node], []
@@ -105,7 +110,7 @@ class CaveGraph:
         
     def get_distance(self, point1, point2):
         # 2D
-        return abs(point1.position[0] - point2.position[0]) + abs(point1.position[1] - point2.position[1])
+        return abs(point1.position[0] - point2.position[0]) + abs(point1.position[1] - point2.position[1]) + abs(point1.position[2] - point2.position[2])
 
     def simplify(self):
         """Smart heuristics to join node into caves. In this implementation, if
@@ -131,12 +136,12 @@ class CaveGraph:
         
         new_clumps = []
         
-        for clump in self.clumps + added_clumps:
+        for clump in list(self.clumps) + added_clumps:
             if clump not in removed_clumps:
                 new_clumps.append(clump)
             else:
                 removed_clumps.remove(clump)
-        print removed_clumps
+
         if removed_clumps:
             raise Exception("Some removed clumps couldn't be found in the main set and I'm scared")
         
@@ -163,19 +168,34 @@ class CaveGraph:
         return nodes, edges
     
 
-class Grapher:
+class SeparatePoint:
+    def __init__(self, point):
+        self.point = point
+        self.position = tuple(point[common.Block.POSITION])
+        self.node = None
+        self.distance_from_wall = point[common.Block.DISTANCE_FROM_WALL]
+    
+    def mark_clump(self):
+        self.point[common.Block.VALUE] = mclevel.materials.LapisLazuliBlock.ID
+    
+    def __str__(self):
+        return str(self.position)
+
+class MCGrapher:
+    NEIGHBORS = ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1))
     def __init__(self, points):
-        self.points = points  
+        self.points = {}
+        for point in points:
+            point = SeparatePoint(point)
+            self.points[point.position] = point
     
     def get_neighbors(self, point):
-        """Copied from thinning"""
-        xpos, ypos = point.position
+        x, y, z = point.position
         neighbors = []
-        for position in [                 (xpos, ypos - 1),
-                         (xpos - 1, ypos),                 (xpos + 1, ypos),
-                                          (xpos, ypos + 1),                 ]:
-            if position in self.points:
-                neighbors.append(self.points[position])
+        for deltax, deltay, deltaz in self.NEIGHBORS:
+            neighbor_position = (x + deltax, y + deltay, z + deltaz)
+            if neighbor_position in self.points:
+                neighbors.append(self.points[neighbor_position])
         return neighbors
         
     def find_tunnel(self, tentacle):
@@ -188,13 +208,6 @@ class Grapher:
         current = beginning_neighbor
         
         while True:
-            green = current.value[1]
-            if green != 0:
-                green = 0
-            else:
-                green = 255
-            current.set_green(green)
-
             neighbors = self.get_neighbors(current)
             if len(neighbors) != 2:
                 finish = current
@@ -217,6 +230,8 @@ class Grapher:
         single node for all of them.
         """
         # TODO: flood fill it properly
+        if point.node:
+            return
         neighbors = len(self.get_neighbors(point))
         if neighbors == 1:
             node = DeadEnd([point])
@@ -253,7 +268,7 @@ class Grapher:
         if starting_point is None:
             raise Exception("Couldn't detect any junction in the thinned map.")
         
-        clumps = []
+        clumps = set()
         tunnels = []
         self.tunnelno = 0
         unchecked_points = [starting_point]
@@ -263,23 +278,28 @@ class Grapher:
             unchecked_points = []
 #            print 'and again'
             for point in points_to_check:
- #               print point
-  #              if point.node:
-   #                 raise Exception("jak nie zonk, to co?")
+                print point
+               # if point.node:
+                #    raise Exception("jak nie zonk, to co?")
+                point.mark_clump()
                 self.mark_clump(point)
-                clumps.append(point.node)
-
+                clumps.add(point.node)
+                print point.node
                 for tentacle in self.get_node_neighbors(point.node):
                     # tentacle is a pair of points: beginning, direction
                     tunnel, ending = self.find_tunnel(tentacle)
+                    print tunnel
                     self.tunnelno += 1
                     if not tunnel_in_container(tunnels, tunnel):
                         tunnels.append(tunnel)
+                    else:
+                        print 'rejected'
                     if ending.node is None and ending not in points_to_check:
     #                    print '\tadding', ending
                         unchecked_points.append(ending)
-#                    raw_input()
-                        
+                print len(clumps), len(tunnels)
+                raw_input()
+        raw_input()
         return CaveGraph(clumps, tunnels)
     
     

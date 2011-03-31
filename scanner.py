@@ -49,21 +49,18 @@ if __name__ == '__main__':
             thinner = flood_filler.dilate()
         except common.PleaseSave:
             print 'save requested'
-    print 'updating'
-    flood_filler.update_world()
-    print 'saving'
-    save(world)
-    raise NotImplementedError
+
     while True:
         try:
             reload(graph.backend)
             reload(graph)
-            print 'copying'
-            world2, points2 = copy_data(world, thinner.points)
-            print 'done copying'
-            grapher = graph.Grapher(points2)
+            grapher = graph.MCGrapher(thinner.unremoved)
             grapher.make_graph()
-            world2.save('graphed.png')
+            
+            print 'updating'
+            flood_filler.update_world()
+            print 'saving'
+            save(world)
             print 'finished'
         except KeyboardInterrupt:
             print 'interrupted'

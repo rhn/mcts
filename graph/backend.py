@@ -17,7 +17,7 @@ class Node(pydot.Node):
         if color is None:
             self.set('style', '')
         else:
-            strcolor = '#' + ''.join((str(component) for component in color))
+            strcolor = '#' + ''.join((hex(component)[2:].zfill(2) for component in color))
             
             self.set('style', 'filled')
             self.set('fillcolor', strcolor)
@@ -56,7 +56,7 @@ def save(filename, nodes, edges):
     
 class ClumpNode(Node):
     def __init__(self, clump):
-        Node.__init__(self, str(clump.points[0]))#str(junction.distance_from_wall))
+        Node.__init__(self, str(clump))#str(junction.distance_from_wall))
 
 
 class EndingNode(ClumpNode):
