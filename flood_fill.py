@@ -227,15 +227,27 @@ class MCFloodFill(FloodFill):
 
     def contains(self, position):
         x, y, z = position
-        return (x / self.CHUNK_SIZE, y / self.CHUNK_SIZE) in self.chunk_coords and 0 <= z < 128
+        return (x / self.CHUNK_SIZE, y / self.CHUNK_SIZE) in self.chunk_coords and 0 <= z < self.CHUNK_HEIGHT
 
     def get_neighbors(self, point): # make use of chunks if point not on chunk edge
         x, y, z = point[Block.POSITION]
-        points = []
-        for deltax, deltay, deltaz in self.NEIGHBORS:
-            neighbor_position = (x + deltax, y + deltay, z + deltaz)
-            if self.contains(neighbor_position):
-                points.append(self.get_point(neighbor_position))
+        adjx = x % self.CHUNK_SIZE
+        adjy = y % self.CHUNK_SIZE
+
+        points = []        
+        if (not adjx) or (not adjy) or (not z) or adjx + 1 == self.CHUNK_SIZE or adjy + 1 == self.CHUNK_SIZE or z + 1 == self.CHUNK_HEIGHT: # on chunk_edge
+            # use normal technique
+            for deltax, deltay, deltaz in self.NEIGHBORS:
+                neighbor_position = (x + deltax, y + deltay, z + deltaz)
+                if self.contains(neighbor_position):
+                    points.append(self.get_point(neighbor_position))
+        else: # inside chunk
+            # all points present
+            cx, cy = x / self.CHUNK_SIZE, y / self.CHUNK_SIZE
+            extended_blocks = self.chunks[cx, cy].extended_blocks
+            for deltax, deltay, deltaz in self.NEIGHBORS:
+                neighbor_chunk_position = (adjx + deltax, adjy + deltay, z + deltaz) 
+                points.append(extended_blocks[neighbor_chunk_position])
         return points
 
     def update_world(self):
