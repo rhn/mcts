@@ -23,7 +23,6 @@ def save(world):
     print 'changing'
     for chunk in (world.getChunk(cx, cy) for cx, cy in world.allChunks):
         if hasattr(chunk, 'modified') and chunk.modified == True:
-            print chunk
             chunk.chunkChanged()
     print 'lighting'
     world.generateLights()

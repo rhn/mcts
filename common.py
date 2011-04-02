@@ -11,6 +11,8 @@ class PleaseSave(Exception):
 class debug:
     small_area = True
     inverted_air = False
+    remove_air = True
+    selected_chunks = frozenset(sum([[(x, y) for y in range(-3, 3)] for x in range(-3, 3)], []))
 
 if debug.small_area:
     print 'Restricted area'
@@ -18,6 +20,8 @@ if debug.small_area:
 if debug.inverted_air:
     print 'Anti-air'
 
+if debug.remove_air:
+    print 'Woodcutting'
 
 class Topic:
     def __init__(self):
@@ -142,7 +146,7 @@ class Pixel(Point):
 
 
 class Block(Point):
-    AIR_VALUES = (mclevel.materials.Air.ID, mclevel.materials.Torch.ID)
+    AIR_VALUES = (mclevel.materials.Air.ID, mclevel.materials.Torch.ID, mclevel.materials.Leaves.ID, mclevel.materials.Wood.ID, mclevel.materials.SnowLayer.ID)
     if debug.inverted_air:
         AIR_VALUES = (mclevel.materials.Cobblestone.ID, mclevel.materials.WoodPlanks.ID, mclevel.materials.Wood.ID, mclevel.materials.Sandstone.ID)
     VALUE = 1

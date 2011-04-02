@@ -2,6 +2,7 @@ import time
 import itertools
 from common import *
 import thinning
+from pymclevel import mclevel
 
 
 def dilate(layer, get_neighbors):
@@ -126,16 +127,18 @@ class FloodFill:
         tacho.close('dilating')
         tacho.close('thinning')
         
+        print 'Thinning finished with {0} points left.'.format(len(thinner.unremoved))
+        tacho.close('skeletization')
+        
+        thinner.check()
+        
+        
         for point in thinner.unremoved:
             Block.mark_final(point)
         
         for point in thinner.peaks:
             Block.mark_maximum(point)
         
-        
-        print 'Thinning finished with {0} points left.'.format(len(thinner.unremoved))
-        tacho.close('skeletization')
-
         return thinner
 
     def mark_generation(self, layer, generation_number):
@@ -153,12 +156,12 @@ class MCFloodFill(FloodFill):
         self.chunks = {}
         self.chunk_coords = set(world.allChunks) # Chunks should never be added/removed, so this is allowed 
         if debug.small_area:
-            self.chunk_coords = [(0, 0), (0, -1), (-1, 0), (-1, -1)]
+            self.chunk_coords = debug.selected_chunks
         
     def get_starting_layer(self):
         chunks = self.world.allChunks
         if debug.small_area:
-            chunks = [(0, 0), (0, -1), (-1, 0), (-1, -1)]
+            chunks = debug.selected_chunks
     
         layer = []
         for cx, cy in chunks:
@@ -174,7 +177,7 @@ class MCFloodFill(FloodFill):
     def get_air_neighboring_walls(self):
         chunks = [chunk for chunk in self.world.allChunks]
         if debug.small_area:
-            chunks = [(0, 0), (0, -1), (-1, 0), (-1, -1)]
+            chunks = debug.selected_chunks
         
         layer = []
         
@@ -183,7 +186,10 @@ class MCFloodFill(FloodFill):
         
         for i, (cx, cy) in enumerate(chunks):
             if not (cx, cy) in self.chunks:
-                self._load_chunk(cx, cy)
+                try:
+                    self._load_chunk(cx, cy)
+                except mclevel.ChunkNotPresent:
+                    continue
             extended_blocks = self.chunks[cx, cy].extended_blocks
             for point in extended_blocks.flat:
                 if point[Block.VALUE] in Block.AIR_VALUES:
@@ -207,7 +213,10 @@ class MCFloodFill(FloodFill):
         offsetx, offsety = cx * self.CHUNK_SIZE, cy * self.CHUNK_SIZE
         for point_position in itertools.product(range(self.CHUNK_SIZE), range(self.CHUNK_SIZE), range(self.CHUNK_HEIGHT)):
             block = extended_blocks[point_position]
-            block[Block.VALUE] = blocks[point_position]
+            value = blocks[point_position]
+            if debug.remove_air and value in Block.AIR_VALUES:
+                value = 0
+            block[Block.VALUE] = value
             x, y, z = point_position
             x = x + offsetx
             y = y + offsety
@@ -235,6 +244,7 @@ class MCFloodFill(FloodFill):
         adjy = y % self.CHUNK_SIZE
 
         points = []        
+        #if True:
         if (not adjx) or (not adjy) or (not z) or adjx + 1 == self.CHUNK_SIZE or adjy + 1 == self.CHUNK_SIZE or z + 1 == self.CHUNK_HEIGHT: # on chunk_edge
             # use normal technique
             for deltax, deltay, deltaz in self.NEIGHBORS:
@@ -251,6 +261,7 @@ class MCFloodFill(FloodFill):
         return points
 
     def update_world(self):
+        tacho.open('updating', 'Updated {0} chunks in {1}s, {2}s per chunk', 'Updated {0} chunks in {1}s, {2} chunks per second')
         for (cx, cy), chunk in self.chunks.items():
             extended_blocks = chunk.extended_blocks
             blocks = chunk.Blocks
@@ -259,7 +270,9 @@ class MCFloodFill(FloodFill):
                     x, y, z = block[Block.POSITION]
                     blocks[x % self.CHUNK_SIZE, y % self.CHUNK_SIZE, z] = block[Block.VALUE]
                     chunk.modified = True
-    
+            tacho.mark('updating', 1)
+        tacho.close('updating')
+        
     def build_thinner(self):
         return thinning.MCDistanceThinner(self.chunks)
 

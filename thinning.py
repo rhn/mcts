@@ -38,7 +38,9 @@ class DistanceThinner:
         total = len(processed_points)
         print '\tThinning - points on the edge {0}, previously untouched {1},\n' \
               '\t\t---- total {2}'.format(len(layer), len(unremoved), total)
+        
         modified_neighbors = layer
+#        modified_neighbors = processed_points
 
         deleted = 0
         i = 0
@@ -60,10 +62,8 @@ class DistanceThinner:
                 
                 if self.is_local_peak(point, neighbors):
                     peaks.append(point)
-                    Block.mark_maximum(point)
                 elif self.is_expendable(point, neighbors):
                     self.remove_point(point) # deletion must be immediate. otherwise two neighboring maxima would both either stay or erase
-                    Block.mark_removed(point)
                     modified = True
                     deleted += 1
                     new_modified_neighbors.extend(neighbors)
@@ -79,6 +79,7 @@ class DistanceThinner:
                 raw_input()
                 '''
             modified_neighbors = new_modified_neighbors
+       
         '''
         for point in processed_points:
             if not point[Block.VERIFIED]:
@@ -86,9 +87,18 @@ class DistanceThinner:
                 if not self.is_local_peak(point, neighbors):
                     if self.is_expendable(point, neighbors):
                         raise Exception("fail")
-           '''     
+        '''     
         
         unremoved = [point for point in processed_points if not point[Block.VERIFIED]]
+        
+        '''       
+        for point in unremoved:
+            if not point[Block.VERIFIED]:
+                neighbors = self.get_neighbors(point)
+                if not self.is_local_peak(point, neighbors):
+                    if self.is_expendable(point, neighbors):
+                        raise Exception("fail2")
+           '''  
         
         self.unremoved = unremoved
         self.peaks = peaks
@@ -150,7 +160,7 @@ class ProgressiveDistanceThinner(DistanceThinner):
 
 def dim3_connected4_expendable(self, point, neighbors):
     if len(neighbors) == 0:
-        raise Exception("no neighbors! can't happen, the code is too stupid to allow these situations, let alone handle them")
+        raise Exception("no neighbors! can't happen, the code is too stupid to allow these situations, let alone handle them " + str(point))
     
     if len(neighbors) == 1:
         return True
@@ -167,7 +177,7 @@ def dim3_connected4_expendable(self, point, neighbors):
         # Because thinning works from lowest to highest distance, that point will never be closer to wall
         posx, posy, posz = point[Block.POSITION]
         insider_position = (posx0 - (posx - posx1), posy0 - (posy - posy1), posz0 - (posz - posz1)) # TODO: check if valid
-        if self.contains(insider_position): # there is another point connecting the same way
+        if self.unremoved_position(insider_position): # there is another point connecting the same way
             return True # feel free to remove me     
         else:
             return False
@@ -185,7 +195,7 @@ def dim3_connected4_expendable(self, point, neighbors):
         for x in range(minx, maxx + 1):
             for y in range(miny, maxy + 1):
                 for z in range(minz, maxz + 1):
-                    if not self.contains((x, y, z)):
+                    if not self.unremoved_position((x, y, z)):
                         return False # this point looks like a connector
         return True # this point is a part of a solid block of 6 (if flat) or 4 (if 3D)
    
@@ -205,7 +215,7 @@ def dim3_connected4_expendable(self, point, neighbors):
         for x in range(minima[0], maxima[0] + 1):
             for y in range(minima[1], maxima[1] + 1):
                 for z in range(minima[2], maxima[2] + 1):
-                    if not self.contains((x, y, z)):
+                    if not self.unremoved_position((x, y, z)):
                         return False # this point looks like a connector
         return True # this point is a part of a solid block and is exposed on one side
     return False # unknown case...
@@ -241,6 +251,7 @@ class MCDistanceThinner(DistanceThinner):
                 neighbors.append(self.get_point(neighbor_position))
         return neighbors
     
+    
     def remove_point(self, point):
         point[Block.VERIFIED] = True
     
@@ -248,9 +259,24 @@ class MCDistanceThinner(DistanceThinner):
         x, y, z = position
         if (x / self.CHUNK_SIZE, y / self.CHUNK_SIZE) in self.chunks and 0 <= z < 128:
             point = self.get_point(position)
-            if not point[Block.VERIFIED] and not point[Block.DISTANCE_FROM_WALL] == 0: # not already removed nor wall
+            if self.unremoved(point):
                 return True
         return False
+
+    def unremoved(self, point):
+     # not already removed nor wall
+        return not point[Block.VERIFIED] and not point[Block.DISTANCE_FROM_WALL] == 0
+
+    def unremoved_position(self, position):
+        return self.contains(position)
+
+    def check(self):
+        self.checking = True
+        for point in self.unremoved:
+            if not self.is_local_peak(point, self.get_neighbors(point)):
+                if self.is_expendable(point, self.get_neighbors(point)):
+                    print point, self.get_neighbors(point)
+
 
     is_expendable = dim3_connected4_expendable
 

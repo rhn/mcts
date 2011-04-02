@@ -132,7 +132,7 @@ class CaveGraph:
                 added_clumps.append(new_node)
             else:
                 staying_tunnels.append(tunnel)
-        print removed_clumps
+        #print removed_clumps
         
         new_clumps = []
         
@@ -270,7 +270,7 @@ class MCGrapher:
         
         clumps = set()
         tunnels = []
-        self.tunnelno = 0
+        i = 0
         unchecked_points = [starting_point]
         
         while unchecked_points:
@@ -278,32 +278,29 @@ class MCGrapher:
             unchecked_points = []
 #            print 'and again'
             for point in points_to_check:
-                print point
                # if point.node:
                 #    raise Exception("jak nie zonk, to co?")
                 point.mark_clump()
                 self.mark_clump(point)
                 clumps.add(point.node)
-                print point.node
                 for tentacle in self.get_node_neighbors(point.node):
                     # tentacle is a pair of points: beginning, direction
                     tunnel, ending = self.find_tunnel(tentacle)
-                    print tunnel
-                    self.tunnelno += 1
+                   # print tunnel
                     if not tunnel_in_container(tunnels, tunnel):
                         tunnels.append(tunnel)
-                    else:
-                        print 'rejected'
                     if ending.node is None and ending not in points_to_check:
     #                    print '\tadding', ending
                         unchecked_points.append(ending)
-                print len(clumps), len(tunnels)
-                raw_input()
-        raw_input()
+            i += 1
+            if i % 20:
+                print '{0}: {1}t, {2}c'.format(i, len(tunnels), len(clumps))
+
         return CaveGraph(clumps, tunnels)
     
     
     def make_graph(self):
+        return
         cave_graph = self.find_structure()
         print 'found {0} tunnels and {1} clumps'.format(len(cave_graph.tunnels), len(cave_graph.clumps))
         cave_graph.simplify()
