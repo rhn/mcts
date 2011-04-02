@@ -242,15 +242,29 @@ class MCDistanceThinner(DistanceThinner):
         extended_blocks = self.chunks[cx, cy].extended_blocks
         return extended_blocks[x % self.CHUNK_SIZE, y % self.CHUNK_SIZE, z]
     
-    def get_neighbors(self, point):
+    def get_neighbors(self, point): # make it return all, not only unremoved
         x, y, z = point[Block.POSITION]
-        neighbors = []
-        for deltax, deltay, deltaz in self.NEIGHBORS:
-            neighbor_position = (x + deltax, y + deltay, z + deltaz)
-            if self.contains(neighbor_position):
-                neighbors.append(self.get_point(neighbor_position))
-        return neighbors
-    
+        adjx = x % self.CHUNK_SIZE
+        adjy = y % self.CHUNK_SIZE
+        
+        points = []        
+        #if True:
+        if (not adjx) or (not adjy) or (not z) or adjx + 1 == self.CHUNK_SIZE or adjy + 1 == self.CHUNK_SIZE or z + 1 == self.CHUNK_HEIGHT: # on chunk_edge
+            # use normal technique
+            for deltax, deltay, deltaz in self.NEIGHBORS:
+                neighbor_position = (x + deltax, y + deltay, z + deltaz)
+                if self.contains(neighbor_position):
+                    points.append(self.get_point(neighbor_position))
+        else: # inside chunk
+            # all points present
+            cx, cy = x / self.CHUNK_SIZE, y / self.CHUNK_SIZE
+            extended_blocks = self.chunks[cx, cy].extended_blocks
+            for deltax, deltay, deltaz in self.NEIGHBORS:
+                neighbor_chunk_position = (adjx + deltax, adjy + deltay, z + deltaz) 
+                point = extended_blocks[neighbor_chunk_position]
+                if self.unremoved_point(point):
+                    points.append(point)
+        return points
     
     def remove_point(self, point):
         point[Block.VERIFIED] = True
@@ -259,16 +273,19 @@ class MCDistanceThinner(DistanceThinner):
         x, y, z = position
         if (x / self.CHUNK_SIZE, y / self.CHUNK_SIZE) in self.chunks and 0 <= z < 128:
             point = self.get_point(position)
-            if self.unremoved(point):
+            if self.unremoved_point(point):
                 return True
         return False
 
-    def unremoved(self, point):
+    def unremoved_point(self, point):
      # not already removed nor wall
         return not point[Block.VERIFIED] and not point[Block.DISTANCE_FROM_WALL] == 0
 
     def unremoved_position(self, position):
-        return self.contains(position)
+        if self.contains(position):
+            return self.unremoved_point(self.get_point(position))
+        else:
+            return False
 
     def check(self):
         self.checking = True
