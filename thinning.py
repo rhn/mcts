@@ -59,11 +59,11 @@ class DistanceThinner:
                 print point
 '''
                 neighbors = self.get_neighbors(point)
-                
+                neighbors = filter(self.unremoved_point, neighbors)                
                 if self.is_local_peak(point, neighbors):
                     peaks.append(point)
                 else:
-                    neighbors = filter(self.unremoved_point, neighbors)
+
                     if self.is_expendable(point, neighbors):
                         self.remove_point(point) # deletion must be immediate. otherwise two neighboring maxima would both either stay or erase
                         modified = True
