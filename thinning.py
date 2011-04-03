@@ -62,18 +62,20 @@ class DistanceThinner:
                 
                 if self.is_local_peak(point, neighbors):
                     peaks.append(point)
-                elif self.is_expendable(point, neighbors):
-                    self.remove_point(point) # deletion must be immediate. otherwise two neighboring maxima would both either stay or erase
-                    modified = True
-                    deleted += 1
-                    new_modified_neighbors.extend(neighbors)
-                    '''
-                    print point
-                    print neighbors
-                    print [point for point in neighbors if not point[Block.VERIFIED] and point[Block.VISITED]]
-                    raw_input()'''
-                else: # point is not maximum but had to stay
-                    pass
+                else:
+                    neighbors = filter(self.unremoved_point, neighbors)
+                    if self.is_expendable(point, neighbors):
+                        self.remove_point(point) # deletion must be immediate. otherwise two neighboring maxima would both either stay or erase
+                        modified = True
+                        deleted += 1
+                        new_modified_neighbors.extend(neighbors)
+                        '''
+                        print point
+                        print neighbors
+                        print [point for point in neighbors if not point[Block.VERIFIED] and point[Block.VISITED]]
+                        raw_input()'''
+                    else: # point is not maximum but had to stay
+                        pass
                 '''
                 print point
                 raw_input()
@@ -160,7 +162,8 @@ class ProgressiveDistanceThinner(DistanceThinner):
 
 def dim3_connected4_expendable(self, point, neighbors):
     if len(neighbors) == 0:
-        raise Exception("no neighbors! can't happen, the code is too stupid to allow these situations, let alone handle them " + str(point))
+        return False
+        raise Exception("no neighbors! can't happen, the code is too stupid to allow these situations, let alone handle them " + str(point) + ' ' + str(self.get_neighbors(point)))
     
     if len(neighbors) == 1:
         return True
@@ -254,7 +257,8 @@ class MCDistanceThinner(DistanceThinner):
             for deltax, deltay, deltaz in self.NEIGHBORS:
                 neighbor_position = (x + deltax, y + deltay, z + deltaz)
                 if self.contains(neighbor_position):
-                    points.append(self.get_point(neighbor_position))
+                    point = self.get_point(neighbor_position)
+                    points.append(point)
         else: # inside chunk
             # all points present
             cx, cy = x / self.CHUNK_SIZE, y / self.CHUNK_SIZE
@@ -262,8 +266,7 @@ class MCDistanceThinner(DistanceThinner):
             for deltax, deltay, deltaz in self.NEIGHBORS:
                 neighbor_chunk_position = (adjx + deltax, adjy + deltay, z + deltaz) 
                 point = extended_blocks[neighbor_chunk_position]
-                if self.unremoved_point(point):
-                    points.append(point)
+                points.append(point)
         return points
     
     def remove_point(self, point):
@@ -272,9 +275,7 @@ class MCDistanceThinner(DistanceThinner):
     def contains(self, position):
         x, y, z = position
         if (x / self.CHUNK_SIZE, y / self.CHUNK_SIZE) in self.chunks and 0 <= z < 128:
-            point = self.get_point(position)
-            if self.unremoved_point(point):
-                return True
+            return True
         return False
 
     def unremoved_point(self, point):

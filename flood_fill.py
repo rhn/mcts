@@ -111,14 +111,13 @@ class FloodFill:
 
             for point in layer:
                 point[Block.VISITED] = True
-            
+                point[Block.DISTANCE_FROM_WALL] = distance
+                
             thinner.thin_layer(layer)
 
             tacho.reset('dilating')
 
             layer = dilate(layer, get_neighbors)
-            for point in layer:
-                point[Block.DISTANCE_FROM_WALL] = distance
             distance += 1
             
             tacho.mark('dilating', points)

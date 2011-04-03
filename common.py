@@ -12,7 +12,7 @@ class debug:
     small_area = True
     inverted_air = False
     remove_air = True
-    selected_chunks = frozenset(sum([[(x, y) for y in range(-3, 3)] for x in range(-3, 3)], []))
+    selected_chunks = frozenset(sum([[(x, y) for y in range(-2, 3)] for x in range(-2, 3)], []))
 
   #  selected_chunks = frozenset(sum([[(x, y) for y in range(-1, 1)] for x in range(-1, 1)], []))
 
