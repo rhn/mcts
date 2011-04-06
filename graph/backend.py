@@ -49,28 +49,36 @@ def save(filename, nodes, edges):
         graph.add_node(node)
     for edge in edges:
         graph.add_edge(edge)
-    with open(filename, 'w') as output:
-        output.write(graph.create(prog='neato -s', format='png'))
+    try:
+        with open(filename, 'w') as output:
+            output.write(graph.create(prog='neato -s', format='png'))
+    except Exception, e:
+        import traceback
+        traceback.print_exc(e)
+        print 'Exception occured. Saving dot file to', filename + '.dot'
+        with open(filename + '.dot', 'w') as output:
+            output.write(graph.create(format='raw'))
     return graph
     
     
 class ClumpNode(Node):
-    def __init__(self, clump):
+    def __init__(self, clump, size):
         Node.__init__(self, str(clump))#str(junction.distance_from_wall))
+        self.set_size(3)
+        self.set_label(str(size))
+
+    def set_size(self, size):
+        return Node.set_size(self, (size, size))
 
 
 class EndingNode(ClumpNode):
-    def __init__(self, ending):
-        ClumpNode.__init__(self, ending)
-#        self.set_size(3)
+    def __init__(self, ending, size):
+        ClumpNode.__init__(self, ending, size)
         self.set_fill_color((255, 0, 0))
     
-    def set_size(self, size):
-        return ClumpNode.set_size(self, (size, size))
-
 
 class JunctionNode(ClumpNode):
-    def __init__(self, junction):
-        ClumpNode.__init__(self, junction)
+    def __init__(self, junction, size):
+        ClumpNode.__init__(self, junction, size)
 #        self.set_size_width(junction.distance_from_wall)
 

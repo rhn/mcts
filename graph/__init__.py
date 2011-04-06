@@ -84,14 +84,14 @@ class Clump:
 class DeadEnd(Clump):
     NAME = 'D'
     def _create_diagram_representation(self):
-        self._root_diagram_node = backend.EndingNode(self)
+        self._root_diagram_node = backend.EndingNode(self, self.get_avg_size())
         self._diagram_representation = [self._root_diagram_node], []
         
         
 class Cave(Clump):
     NAME = 'C'
     def _create_diagram_representation(self):
-        self._root_diagram_node = backend.JunctionNode(self)
+        self._root_diagram_node = backend.JunctionNode(self, self.get_avg_size())
         self._diagram_representation = [self._root_diagram_node], []
 
 
@@ -252,22 +252,7 @@ class MCGrapher:
                     neighbors.append((point, neighbor))
         return neighbors
     
-    def find_structure(self):
-        """Depth-first graph traversal, extracts clumps (nodes) and tunnels
-        (edges). Graph must have at least one point that is a junction.
-        """
-        
-        starting_point = None
-        # firse initalize points
-        for point in self.points.values():
-            point.node = None
-            neighbors = self.get_neighbors(point)
-            if len(neighbors) != 2:
-                starting_point = point
-        
-        if starting_point is None:
-            raise Exception("Couldn't detect any junction in the thinned map.")
-        
+    def follow_graph(self, starting_point):
         clumps = set()
         tunnels = []
         i = 0
@@ -297,18 +282,47 @@ class MCGrapher:
                 print '{0}: {1}t, {2}c'.format(i, len(tunnels), len(clumps))
 
         return CaveGraph(clumps, tunnels)
+
     
+    def find_structure(self):
+        """Depth-first graph traversal, extracts clumps (nodes) and tunnels
+        (edges). Graph must have at least one point that is a junction.
+        """
+        cave_graphs = []
+        starting_point = None
+        # firse initalize points
+        for point in self.points.values():
+            neighbors = self.get_neighbors(point)
+            if len(neighbors) != 2 and point.node is None:
+                starting_point = point
+                print 'Found graph!'
+                cave_graphs.append(self.follow_graph(starting_point))
+        
+        if starting_point is None:
+            raise Exception("Couldn't detect any junction in the thinned map.")
+        
+        return cave_graphs    
     
     def make_graph(self):
-        return
-        cave_graph = self.find_structure()
-        print 'found {0} tunnels and {1} clumps'.format(len(cave_graph.tunnels), len(cave_graph.clumps))
-        cave_graph.simplify()
+        cave_graphs = self.find_structure()
+        print 'found {0} disjoint areas'.format(len(cave_graphs))
+        for i, cave_graph in enumerate(cave_graphs):
+            if len(cave_graph.clumps) < 4:
+                print 'Area {0} ignored, {1} clumps'.format(i, len(cave_graph.clumps))         
+                continue
+            print 'Area {0}'.format(i)
+            print 'found {0} tunnels and {1} clumps'.format(len(cave_graph.tunnels), len(cave_graph.clumps))
+            nodes, edges = cave_graph.extract_diagram()
+            backend.save('maprc' + str(i) + '.png', nodes, edges)
 
-        print 'simplified to {0} tunnels and {1} clumps'.format(len(cave_graph.tunnels), len(cave_graph.clumps))
-        
-        nodes, edges = cave_graph.extract_diagram()
+            cave_graph.simplify()
+            if len(cave_graph.clumps) < 4:
+                print 'Not worth it: {0} clumps'.format(len(cave_graph.clumps))         
+                continue
+            print 'simplified to {0} tunnels and {1} clumps'.format(len(cave_graph.tunnels), len(cave_graph.clumps))
+            
+            nodes, edges = cave_graph.extract_diagram()
 
-        print 'resulting image will be composed of {0} edges connecting {1} nodes'.format(len(edges), len(nodes))
-#        print edges
-        backend.save('map.png', nodes, edges)
+            print 'resulting image will be composed of {0} edges connecting {1} nodes'.format(len(edges), len(nodes))
+    #        print edges
+            backend.save('map' + str(i) + '.png', nodes, edges)

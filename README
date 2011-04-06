@@ -1,5 +1,24 @@
 README and TODO and BUGS and LICENSE
 
+This program takes a Minecraft level, finds its topological structure (in terms of caves and tunnels), and produces Graphviz files / png images for each tunnel system it can find.
+It destroys the map by placing thinning results inside.
+After program is done with thinning, it will wait for graph module modifications. Pressing enter will cause the program to recalculate graph and resave map.
+
+Before proceeding, check out class debug in common.py
+
+How it works:
+1. Take all air blocks next to walls.
+2. Dilate them and save dilation number (distance from wall) until all points are dilated
+3. Have a separate list of points (initially empty) and at each step: add all freshly-dilated points to it, try to remove each point from it as long as there are no disconnections or other changes in structure (within the list).
+4. The resulting list is a skeleton of the level. It may contain disjoint subgraphs.
+5. Find an unprocessed group of points connected to 3 other points. This is a "clump" in a subgraph of the total graph.
+6. Traverse the subgraph, marking clumps and connecting them with tunnels.
+7. Go to 5, unless there is no more unmarked clumps.
+--- "rc" files are printed now
+8. For each graph, combine clumps close together removing 1 tunnel between them and merging other properties.
+9. Filter out graphs with few nodes.
+10. Print out images/.dot files.
+
 README:
 
 1. Requirements:
@@ -7,6 +26,8 @@ README:
 * pydot
 * Python Imaging Library
 * graphviz
+* about 1MB RAM per map chunk
+* about 5h for 500 chunk map on a 1.2 GHz Intel Core
 
 2. Glossary:
         point - wrapper around the point object of the map. Points on the map are not going to be accessed by any other means. Contains references to clumps
@@ -21,22 +42,15 @@ README:
         node - clump after processing or after graphing
         
 TODO:
-    everything:
-        make sure 3D comes easily
     graph:
-        simplify_structure needs to combine clumps that are nearby using some smart heuristics
-        clumps, tunnels must be made into a separate object after first phase of extraction is complete. Will contain:
-            connect_clumps
-            simplify_structure
-            extract_diagram
-        
         node and edge conversion to printing form should be moved into Node, Tunnel and subclasses
             Node.get_graph_representation()
             find a way to present it nicely
         
-        split grapher into 2 classes: general and 2D
-        
         clump resolution:
+            BARE MINIMUM:
+                mark_clump should mark all nodes in the clump (3+ neighbors). Otherwise floating points will make the program SLOW
+                
             world, flat cave:
                 1. dilate X times (for 3D and stupid distance it's 2) to get cave all covered. dilate over anything, including space and tunnels
                 2. flood fill every resulting surface to count surfaces
@@ -45,7 +59,9 @@ TODO:
                 5. AND dilated surfaces and world and save in separate graphers
                 6. remove points from graphers
                 7. graph each world and save it inside world. will be accessible by Node.get_graph_representation()
+        printing nodes should take inteeresting properties from points and present them graphically
+    
     display:
-        node sizes
+        node properties
     thinning:
-        wall type preserving towards the middle
+        points should carry information about interesting neighbors towards the innermost skeleton
